@@ -1,14 +1,19 @@
-from seaborn import apionly as sns
-
-import matplotlib.pyplot as plt
-
-from matplotlib import rcParams
+import time
+import numpy as np
+from numpy.linalg import inv
+from pprint import pprint  #! unused
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+import matplotlib.ticker as plticker
+from genKFTracks2d import gen_tracks, x_range, y_range
+
+#! deprecated, unused
+#from seaborn import apionly as sns
 
 mpl.use("Agg")
 
 plt.style.use(["seaborn-whitegrid", "seaborn-ticks"])
-import matplotlib.ticker as plticker
 
 rcParams["figure.figsize"] = 12, 8
 rcParams["axes.facecolor"] = "FFFFFF"
@@ -23,19 +28,11 @@ rcParams["mathtext.rm"] = "serif"
 
 rcParams.update({"figure.autolayout": True})
 
-import matplotlib.ticker as plticker
-
-import numpy as np
-
 np.random.seed(42)
 
-from numpy.linalg import inv
 
-from pprint import pprint
 
-import time
 
-from genKFTracks2d import genTracks, xRange, yRange
 
 # Track hits are [x, y]
 # Track states are [x, theta, y, phi]
@@ -202,16 +199,16 @@ def chiSquared(residual, G, C_proj, p_proj, p_filt):
 
 if __name__ == "__main__":
 
-    nGen = 7
-    hits, trueTracks = genTracks(nGen=nGen)
+    n_gen = 7
+    hits, trueTracks = gen_tracks(n_gen=n_gen)
 
-    m0 = np.zeros((4, nGen))
+    m0 = np.zeros((4, n_gen))
     m0[0, :] = hits[:, 0, 0]  # First plane, x hits
     m0[2, :] = hits[:, 0, 1]  # First plane, y hits
 
     p0 = m0
 
-    C0 = np.stack([C0 for i in range(nGen)], -1)
+    C0 = np.stack([C0 for i in range(n_gen)], -1)
 
     start = time.perf_counter()
 
@@ -236,7 +233,7 @@ if __name__ == "__main__":
         # p_proj, C_proj = projectEKF(F, p, C, Q)
         p_proj, C_proj = project(F, p, C, Q)
 
-        m = np.zeros((4, nGen))
+        m = np.zeros((4, n_gen))
         m[0, :] = hits[:, i, 0]  # ith plane, x hits
         m[2, :] = hits[:, i, 1]  # ith plane, y hits
 
@@ -292,13 +289,13 @@ if __name__ == "__main__":
     fig = plt.figure(figsize=(8, 8))
 
     ax = fig.add_subplot(2, 2, 1)
-    plotHits(N, smoothedTrack[:, 0, :].T, hits.T[0, :, :], xRange, "x", ax=ax)
+    plotHits(N, smoothedTrack[:, 0, :].T, hits.T[0, :, :], x_range, "x", ax=ax)
 
     ax = fig.add_subplot(2, 2, 2)
-    plotHits(N, smoothedTrack[:, 2, :].T, hits.T[1, :, :], xRange, "y", ax=ax)
+    plotHits(N, smoothedTrack[:, 2, :].T, hits.T[1, :, :], x_range, "y", ax=ax)
 
     ax = fig.add_subplot(2, 2, 3)
-    plotHits2d(N, smoothedTrack, hits, xRange, yRange, ax=ax)
+    plotHits2d(N, smoothedTrack, hits, x_range, y_range, ax=ax)
 
     plt.savefig("kfTracks.pdf")
     plt.clf()

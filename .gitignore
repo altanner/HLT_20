@@ -1,10 +1,8 @@
 env_sept20/
+python_kalman_filter/env_mba
 .vscode/
 HLT_20.code-workspace
 */__pycache__/
 */*.pdf
 *.pdf
 legacy/
-
-
-kalman_filter_python/env_mba

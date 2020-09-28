@@ -36,7 +36,7 @@ import time
 
 import argparse
 
-from genKFTracks2d import genTracks
+from genKFTracks2d import gen_tracks
 
 d = 1.0  # Distance between planes
 sigma = 10e-2  # Resolution f planes
@@ -50,7 +50,7 @@ argParser = argparse.ArgumentParser()
 argParser.add_argument("-n", type=int, dest="n", default=1, help="nInputs")
 args = argParser.parse_args()
 
-nGen = args.n
+n_gen = args.n
 
 F = np.array([[1, d, 0, 0], [0, 1, 0, 0], [0, 0, 1, d], [0, 0, 0, 1]])
 G = np.array(
@@ -77,8 +77,8 @@ projectedCov = None
 filteredTrack = None
 filteredCov = None
 
-F_init = tf.Variable(np.tile(F_1, (nGen, 1, 1)), dtype=tf.float32)
-F = tf.Variable(np.tile(F_1, (nGen, 1, 1)), dtype=tf.float32)
+F_init = tf.Variable(np.tile(F_1, (n_gen, 1, 1)), dtype=tf.float32)
+F = tf.Variable(np.tile(F_1, (n_gen, 1, 1)), dtype=tf.float32)
 
 
 def residual(hits, p_filtered, H):
@@ -188,20 +188,20 @@ def project_and_filter_internal(
 
 if __name__ == "__main__":
 
-    # nGen defined globally
+    # n_gen defined globally #! 
 
-    hits, trueTracks = genTracks(nGen=nGen)
+    hits, trueTracks = gen_tracks(n_gen=n_gen)
 
     hits = tf.constant(hits, dtype=tf.float32)
 
-    m0 = tf.Variable(tf.zeros((4, nGen)))  # (hit_x, slope_x, hit_y, slope_y)
+    m0 = tf.Variable(tf.zeros((4, n_gen)))  # (hit_x, slope_x, hit_y, slope_y)
 
     m0[0, :].assign(hits[:, 0, 0])  # First plane, x hits
     m0[2, :].assign(hits[:, 0, 1])  # First plane, y hits
 
     p0 = m0
 
-    C0 = tf.constant(np.stack([C0 for i in range(nGen)], -1), dtype=tf.float32)
+    C0 = tf.constant(np.stack([C0 for i in range(n_gen)], -1), dtype=tf.float32)
 
     start = time.perf_counter()
 
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     filteredTrack = tf.Variable([p for i in range(N)])
     filteredCov = tf.Variable([C for i in range(N)])
 
-    m = tf.Variable(tf.zeros((4, nGen)))
+    m = tf.Variable(tf.zeros((4, n_gen)))
 
     for i in range(1, N):
 

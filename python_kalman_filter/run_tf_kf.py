@@ -1,15 +1,16 @@
-import sys
-import os
-import re
-
-from tqdm import tqdm
+import sys #! unused
+import os #! unused
+import re #! unused
+import numpy as np #! unused
 
 import json
-
 import subprocess as sp
+from tqdm import tqdm #! I can see where this goes
 
-import numpy as np
 
+tf_kf_py_file = "tf_kalman_filter_2d.py"
+
+#* eight batches, 2^24 - 2^16 #? why
 batch_sizes = [2 ** x for x in range(16, 24)][::-1]
 
 print(batch_sizes)
@@ -17,12 +18,15 @@ print(batch_sizes)
 timingsGPU = {}
 timingsGPUNoSkip = {}
 
-for b in batch_sizes:
+for batch_size in batch_sizes:
 
-    name = f"{b}"
+    name = f"{batch_size}"
 
-    commandGPU = f"python kfTFVec.py -n {b}"
-    commandGPUNoSkip = f"python kfTFVecNoSkip.py -n {b}"
+    #! this line used to refer to "kfTFVec.py", file absent.
+    #! changed to the tf file, "tf_kalman_filter_2d.py" - is this right?
+    commandGPU = f"python {tf_kf_py_file} -n {batch_size}"
+    #! this file is absent
+    commandGPUNoSkip = f"python kfTFVecNoSkip.py -n {batch_size}"
 
     sp.check_output(commandGPU, shell=True)
 
@@ -35,7 +39,7 @@ for b in batch_sizes:
 
     timingsGPU[name] = tot / 10.0
 
-    commandGPU = f"python kfTFVec.py -n {b}"
+    commandGPU = f"python kfTFVec.py -n {batch_size}"
 
     sp.check_output(commandGPU, shell=True)
 
@@ -47,6 +51,7 @@ for b in batch_sizes:
         tot += resultGPU
 
     timingsGPUNoSkip[name] = tot / 10.0
+
 
 json.dump(timingsGPU, open("kf_bench_tf_skip_gpu.json", "w"))
 json.dump(timingsGPUNoSkip, open("kf_bench_tf_noSkip_gpu.json", "w"))
