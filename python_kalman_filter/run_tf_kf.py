@@ -5,12 +5,12 @@ import numpy as np #! unused
 
 import json
 import subprocess as sp
-from tqdm import tqdm #! I can see where this goes
+from tqdm import tqdm #! I can see where this goes (unused)
 
 
 tf_kf_py_file = "tf_kalman_filter_2d.py"
 
-#* eight batches, 2^24 - 2^16 #? why
+#! eight batches, 2^24 - 2^16 #? why
 batch_sizes = [2 ** x for x in range(16, 24)][::-1]
 
 print(batch_sizes)

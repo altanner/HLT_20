@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import linear_sum_assignment
-from plot_config import plot_config  
+from plot_config import plot_config
 
 
 np.random.seed(42)
@@ -66,7 +66,7 @@ def plot_hits2d(plane_count, plot_tracks, digi_hits, plane_range_x, plane_range_
 
 
 def dist(h1, h2): #! <<< distance of what?
-    
+
     return np.linalg.norm(h1 - h2)
 
 
@@ -199,6 +199,6 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
 if __name__ == "__main__":
 
     plot_config() #! does this do anything?!
-    gen_tracks(n_gen=10, plot=True) #! make pdf plot
+    gen_tracks(n_gen=100, plot=True) #! make pdf plot
     #! this was me :/
-    print(gen_tracks(n_gen=10)) #! to go to vector file?
+    print(gen_tracks(n_gen=100)) #! to go to vector file?
