@@ -75,6 +75,7 @@ def exchange_track_hits(reco_hits, frac=0.2, prob=0.2):
     new_hits = reco_hits.copy()
 
     #! need to understand this.
+    #!
     # Exchange closest frac hits with probability prob
     # Only exchange hits on the same plane
     # Want to avoid exchanging hits for same tracks?
@@ -141,23 +142,26 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
     tan_phis = np.tan(np.random.uniform(*initial_phi_range, n_gen))
 
     # tan_thetas = np.tan([0 for i in range(n_gen)])
-    x_true_hits = np.outer(tan_thetas, plane_distance * np.array(range(1, plane_count + 1)))
-    y_true_hits = np.outer(tan_phis, plane_distance * np.array(range(1, plane_count + 1)))
+    x_true_hits = np.outer(tan_thetas,
+                           plane_distance * np.array(range(1, plane_count + 1)))
+    y_true_hits = np.outer(tan_phis,
+                           plane_distance * np.array(range(1, plane_count + 1)))
 
     #! np.stack joins arrays along new axis
     true_hits = np.stack((x_true_hits, y_true_hits), -1)
 
-    x_plot_tracks = np.hstack(
-        (np.zeros((n_gen, 1)), x_true_hits)
-    )  # Project tracks back to origin @ -1
-    y_plot_tracks = np.hstack(
-        (np.zeros((n_gen, 1)), y_true_hits)
-    )  # Project tracks back to origin @ -1
+    x_plot_tracks = np.hstack((np.zeros((n_gen, 1)),
+                               x_true_hits))  # Project tracks back to origin @ -1
+
+    y_plot_tracks = np.hstack((np.zeros((n_gen, 1)),
+                               y_true_hits))  # Project tracks back to origin @ -1
 
     plot_tracks = np.stack((x_plot_tracks, y_plot_tracks), -1)
 
     # Fix me #! <<< what needs fixing?
-    msGauss = np.random.normal(np.zeros(plane_count), scatter_errors, (n_gen, plane_count))
+    msGauss = np.random.normal(np.zeros(plane_count),
+                               scatter_errors,
+                               (n_gen, plane_count))
 
     x_hits = x_true_hits + msGauss #! apply scatter
     y_hits = y_true_hits + msGauss #! apply scatter
@@ -198,7 +202,7 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
 
 if __name__ == "__main__":
 
-    plot_config() #! does this do anything?!
+#    plot_config() #! does this do anything?!
     gen_tracks(n_gen=100, plot=True) #! make pdf plot
     #! this was me :/
     print(gen_tracks(n_gen=100)) #! to go to vector file?

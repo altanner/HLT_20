@@ -1,6 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+import matplotlib.ticker as plticker
 
 
 def plot_config():
@@ -10,6 +11,7 @@ def plot_config():
     mpl.use("Agg")
 
     plt.style.use(["seaborn-whitegrid", "seaborn-ticks"])
+
     rcParams["figure.figsize"] = 12, 8
     rcParams["axes.facecolor"] = "FFFFFF"
     rcParams["savefig.facecolor"] = "FFFFFF"

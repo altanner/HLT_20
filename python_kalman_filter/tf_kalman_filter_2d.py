@@ -1,67 +1,55 @@
-import matplotlib.pyplot as plt
-
-from matplotlib import rcParams
-import matplotlib as mpl
-
-mpl.use("Agg")
-
-plt.style.use(["seaborn-whitegrid", "seaborn-ticks"])
-import matplotlib.ticker as plticker
-
-rcParams["figure.figsize"] = 12, 8
-rcParams["axes.facecolor"] = "FFFFFF"
-rcParams["savefig.facecolor"] = "FFFFFF"
-rcParams["figure.facecolor"] = "FFFFFF"
-
-rcParams["xtick.direction"] = "in"
-rcParams["ytick.direction"] = "in"
-
-rcParams["mathtext.fontset"] = "cm"
-rcParams["mathtext.rm"] = "serif"
-
-rcParams.update({"figure.autolayout": True})
-
+import time
 import numpy as np
+import argparse
+from pprint import pprint
+import tensorflow as tf
+from genKFTracks2d import gen_tracks
 
 np.random.seed(42)
-
-from pprint import pprint
-
-import tensorflow as tf
 
 tf.config.threading.set_intra_op_parallelism_threads(1)
 tf.config.threading.set_inter_op_parallelism_threads(1)
 
-import time
-
-import argparse
-
-from genKFTracks2d import gen_tracks
-
-d = 1.0  # Distance between planes
-sigma = 10e-2  # Resolution f planes
-N = 5  # Number of planes
-z = 0.1  # Thickness of absorber
-x0 = 0.01  # Radiation length of absorber
-theta0 = 10e-3  # Multiple scattering uncertainty (TODO: use formula)
-
 argParser = argparse.ArgumentParser()
-
 argParser.add_argument("-n", type=int, dest="n", default=1, help="nInputs")
 args = argParser.parse_args()
-
 n_gen = args.n
 
-F = np.array([[1, d, 0, 0], [0, 1, 0, 0], [0, 0, 1, d], [0, 0, 0, 1]])
-G = np.array(
-    [[1 / sigma ** 2, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1 / sigma ** 2, 0], [0, 0, 0, 0]]
-)
-H = np.array([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]])
+
+plane_distance = 1.0  # Distance between planes
+sigma = 10e-2         # Resolution of planes #! why is this and sigma diff from gentracks?
+plane_count = 5       # Number of planes
+z = 0.1               # Thickness of absorber
+x0 = 0.01             # Radiation length of absorber
+theta0 = 10e-3        # Multiple scattering uncertainty (TODO: use formula)
+
+#! initiate the matrices
+#! F is the transfer matrix
+F = np.array([[1, plane_distance, 0, 0],
+              [0, 1, 0, 0],
+              [0, 0, 1, plane_distance],
+              [0, 0, 0, 1]])
+
+#! G is the noise matrix
+G = np.array([[1 / sigma ** 2, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 1 / sigma ** 2, 0],
+              [0, 0, 0, 0]])
+
+#! H the relation between the measurement m and the state p
+H = np.array([[1, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 1, 0],
+              [0, 0, 0, 0]])
+
+#! Q is the random error matrix, ie the scatter
 Q = np.zeros(4)
 
-C0 = np.array(
-    [[sigma ** 2, 0, 0, 0], [0, np.pi, 0, 0], [0, 0, sigma ** 2, 0], [0, 0, 0, np.pi]]
-)
+#! C0 is not mentioned in the paper (?)
+C0 = np.array([[sigma ** 2, 0, 0, 0],
+               [0, np.pi, 0, 0],
+               [0, 0, sigma ** 2, 0],
+               [0, 0, 0, np.pi]])
 
 F_1 = tf.constant(F, dtype=tf.float32)
 F_scalar = tf.constant(F_1, dtype=tf.float32)
@@ -152,7 +140,7 @@ def project_and_filter_internal(
     i, m, hits, p, C, filteredTrack, filteredCov, projectedTrack, projectedCov
 ):
 
-    global F
+    global F #! ?
 
     p = filteredTrack[i - 1]
     C = filteredCov[i - 1]
@@ -188,8 +176,11 @@ def project_and_filter_internal(
 
 if __name__ == "__main__":
 
-    # n_gen defined globally #! 
-
+    # n_gen defined globally #!
+    #! input are generated tracks.
+    #! outputs are project track, proj covariance,
+    #!             smooth track, smooth covariance,
+    #!             filtered track, filtered covariance
     hits, trueTracks = gen_tracks(n_gen=n_gen)
 
     hits = tf.constant(hits, dtype=tf.float32)
@@ -212,16 +203,17 @@ if __name__ == "__main__":
     p = tf.transpose(p)
     C = tf.transpose(C, (1, 2, 0))
 
-    projectedTrack = tf.Variable([p_proj for i in range(N)])
-    projectedCov = tf.Variable([C_proj for i in range(N)])
+    projectedTrack = tf.Variable([p_proj for i in range(plane_count)])
+    projectedCov = tf.Variable([C_proj for i in range(plane_count)])
 
-    filteredTrack = tf.Variable([p for i in range(N)])
-    filteredCov = tf.Variable([C for i in range(N)])
+    filteredTrack = tf.Variable([p for i in range(plane_count)])
+    filteredCov = tf.Variable([C for i in range(plane_count)])
 
     m = tf.Variable(tf.zeros((4, n_gen)))
 
-    for i in range(1, N):
+    for i in range(1, plane_count):
 
+        #! project forward, filter /smooth backwards.
         p_proj, C_proj, p_filt, C_filt = project_and_filter_internal(
             tf.constant(i),
             m,
@@ -231,8 +223,7 @@ if __name__ == "__main__":
             filteredTrack,
             filteredCov,
             projectedTrack,
-            projectedCov,
-        )
+            projectedCov)
 
         filteredTrack[i].assign(p_filt)
         filteredCov[i].assign(C_filt)
@@ -240,10 +231,10 @@ if __name__ == "__main__":
         projectedTrack[i].assign(p_proj)
         projectedCov[i].assign(C_proj)
 
-    smoothedTrack = tf.Variable([filteredTrack[-1] for i in range(N)])
-    smoothedCov = tf.Variable([tf.transpose(filteredCov[-1]) for i in range(N)])
+    smoothedTrack = tf.Variable([filteredTrack[-1] for i in range(plane_count)])
+    smoothedCov = tf.Variable([tf.transpose(filteredCov[-1]) for i in range(plane_count)])
 
-    reversedPlaneIndices = list(range(0, N - 1))
+    reversedPlaneIndices = list(range(0, plane_count - 1))
     reversedPlaneIndices.reverse()
 
     for i in reversedPlaneIndices:
@@ -261,8 +252,7 @@ if __name__ == "__main__":
             C_k1_proj,
             p_filtered,
             tf.transpose(C_filtered, (2, 0, 1)),
-            A,
-        )
+            A)
 
         smoothedTrack[i].assign(p_smooth)
         smoothedCov[i].assign(C_smooth)
@@ -270,3 +260,5 @@ if __name__ == "__main__":
     end = time.perf_counter()
 
     print(f"{end - start}")
+
+   # print(f"Projected\n {p_proj} \n Filtered\n {p_filt} \n Smooth\n {p_smooth}")
