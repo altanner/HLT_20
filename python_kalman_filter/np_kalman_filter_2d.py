@@ -52,7 +52,7 @@ G = np.array([[1 / sigma ** 2, 0, 0, 0],
               [0, 0, 1 / sigma ** 2, 0],
               [0, 0, 0, 0]])
 
-#! H the relation between the measurement mand the state p
+#! H the relation between the measurement m and the state p
 H = np.array([[1, 0, 0, 0],
               [0, 0, 0, 0],
               [0, 0, 1, 0],
