@@ -8,30 +8,8 @@ from matplotlib import rcParams
 import matplotlib.ticker as plticker
 from genKFTracks2d import gen_tracks, x_range, y_range
 
-#! deprecated, unused
-#from seaborn import apionly as sns
+np.random.seed(42)
 
-# mpl.use("Agg")
-
-# plt.style.use(["seaborn-whitegrid", "seaborn-ticks"])
-
-# rcParams["figure.figsize"] = 12, 8
-# rcParams["axes.facecolor"] = "FFFFFF"
-# rcParams["savefig.facecolor"] = "FFFFFF"
-# rcParams["figure.facecolor"] = "FFFFFF"
-
-# rcParams["xtick.direction"] = "in"
-# rcParams["ytick.direction"] = "in"
-
-# rcParams["mathtext.fontset"] = "cm"
-# rcParams["mathtext.rm"] = "serif"
-
-# rcParams.update({"figure.autolayout": True})
-
-# np.random.seed(42) #! unused?
-
-# Track hits are [x, y]
-# Track states are [x, theta, y, phi]
 
 plane_distance = 1.0  # Distance between planes
 sigma = 10e-2         # Resolution of planes #! why is this and sigma diff from gentracks?
@@ -40,6 +18,7 @@ z = 0.1               # Thickness of absorber
 x0 = 0.01             # Radiation length of absorber
 theta0 = 10e-3        # Multiple scattering uncertainty (TODO: use formula)
 
+#! initiate the matrices
 #! F is the transfer matrix
 F = np.array([[1, plane_distance, 0, 0],
               [0, 1, 0, 0],
@@ -58,7 +37,7 @@ H = np.array([[1, 0, 0, 0],
               [0, 0, 1, 0],
               [0, 0, 0, 0]])
 
-#! Q is the random error matrix
+#! Q is the random error matrix, ie the scatter
 Q = np.zeros(4)
 
 #! C0 is not mentioned in the paper (?)
