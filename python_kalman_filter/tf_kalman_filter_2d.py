@@ -15,15 +15,14 @@ argParser.add_argument("-n", type=int, dest="n", default=1, help="nInputs")
 args = argParser.parse_args()
 n_gen = args.n
 
-
 plane_distance = 1.0  # Distance between planes
-sigma = 10e-2         # Resolution of planes #! why is this and sigma diff from gentracks?
+sigma = 10e-2         # Resolution of planes
 plane_count = 5       # Number of planes
 z = 0.1               # Thickness of absorber
 x0 = 0.01             # Radiation length of absorber
 theta0 = 10e-3        # Multiple scattering uncertainty (TODO: use formula)
 
-#! initiate the matrices
+#! initiate the matrices as numpy arrays
 #! F is the transfer matrix
 F = np.array([[1, plane_distance, 0, 0],
               [0, 1, 0, 0],
@@ -45,31 +44,35 @@ H = np.array([[1, 0, 0, 0],
 #! Q is the random error matrix, ie the scatter
 Q = np.zeros(4)
 
-#! C0 is not mentioned in the paper (?)
+#! C0 is the initial parameters
 C0 = np.array([[sigma ** 2, 0, 0, 0],
                [0, np.pi, 0, 0],
                [0, 0, sigma ** 2, 0],
                [0, 0, 0, np.pi]])
 
-F_1 = tf.constant(F, dtype=tf.float32)
-F_scalar = tf.constant(F_1, dtype=tf.float32)
-
+#! Convert numpy arrays to tensors
+F_tensor = tf.constant(F, dtype=tf.float32)
+F_scalar = tf.constant(F_tensor, dtype=tf.float32)
+F = tf.Variable(np.tile(F_tensor, (n_gen, 1, 1)), dtype=tf.float32)
 G = tf.constant(G, dtype=tf.float32)
 H = tf.constant(H, dtype=tf.float32)
 Q = tf.constant(Q, dtype=tf.float32)
 C0 = tf.constant(C0, dtype=tf.float32)
 
+#! initiate projected and filtered tracks and covariances
 projectedTrack = None
 projectedCov = None
-
 filteredTrack = None
 filteredCov = None
 
-F_init = tf.Variable(np.tile(F_1, (n_gen, 1, 1)), dtype=tf.float32)
-F = tf.Variable(np.tile(F_1, (n_gen, 1, 1)), dtype=tf.float32)
-
 
 def residual(hits, p_filtered, H):
+
+    """Calculates the residuals between hit and fitted track
+
+    Takes: hits, p_filtered_, H
+
+    Returns: Tensor of residuals"""
 
     # Pad to shape of p, transpose to col vector
     hits_full_dim = tf.transpose(tf.pad(tf.expand_dims(hits, 1), [[0, 0], [0, 1]]))
@@ -79,11 +82,18 @@ def residual(hits, p_filtered, H):
 
 def chiSquared(residual, G, C_proj, p_proj, p_filt):
 
+    """Calculates the chi-squared of the hit against fitted track
+
+    Parameters: residual (as a function), G, current projection,
+    projected path, filtered path (?)
+
+    Returns: Tensor of ummm Einstein Summations?"""
+
     t1 = tf.einsum("iB,jB -> B", residual, G @ residual)
 
     p_diff = p_filt - p_proj
 
-    C_diff = tf.einsum("Bij,Bj->Bi", tf.linalg.inv(C_proj), p_diff)
+    C_diff = tf.einsum("Bij,Bj -> Bi", tf.linalg.inv(C_proj), p_diff)
 
     t2 = tf.einsum("Bi,Bj -> B", p_diff, C_diff)
 
@@ -109,7 +119,7 @@ def filter(p_proj, C_proj, H, G, m):
     # Innermost two axies must be 'matrix'
     inv_C_proj = tf.linalg.inv(C_proj)
 
-    C = tf.linalg.inv(inv_C_proj + HG @ H)
+    C = tf.linalg.inv(inv_C_proj + HG @ H) #! ? what takes precedence here? >>@?
 
     # Reversing batch dimension -> fix me!
     p = tf.einsum("Bij,Bj->Bi", inv_C_proj, p_proj) + tf.einsum("ji,iB->Bj", HG, m)
@@ -140,7 +150,7 @@ def project_and_filter_internal(
     i, m, hits, p, C, filteredTrack, filteredCov, projectedTrack, projectedCov
 ):
 
-    global F #! ?
+    global F #* ?
 
     p = filteredTrack[i - 1]
     C = filteredCov[i - 1]
@@ -182,7 +192,7 @@ if __name__ == "__main__":
     #!             smooth track, smooth covariance,
     #!             filtered track, filtered covariance
     hits, trueTracks = gen_tracks(n_gen=n_gen)
-
+    print("hits\n", hits, "\ntruetracks\n", trueTracks)
     hits = tf.constant(hits, dtype=tf.float32)
 
     m0 = tf.Variable(tf.zeros((4, n_gen)))  # (hit_x, slope_x, hit_y, slope_y)
@@ -259,6 +269,6 @@ if __name__ == "__main__":
 
     end = time.perf_counter()
 
-    print(f"{end - start}")
+    print(f"Time elapsed: {end - start}")
 
-   # print(f"Projected\n {p_proj} \n Filtered\n {p_filt} \n Smooth\n {p_smooth}")
+    print(f"Projected\n {p_proj} \n Filtered\n {p_filt} \n Smooth\n {p_smooth}")

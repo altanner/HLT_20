@@ -12,7 +12,7 @@ np.random.seed(42)
 
 
 plane_distance = 1.0  # Distance between planes
-sigma = 10e-2         # Resolution of planes #! why is this and sigma diff from gentracks?
+sigma = 10e-2         # Resolution of planes
 plane_count = 5       # Number of planes
 z = 0.1               # Thickness of absorber
 x0 = 0.01             # Radiation length of absorber
@@ -40,7 +40,7 @@ H = np.array([[1, 0, 0, 0],
 #! Q is the random error matrix, ie the scatter
 Q = np.zeros(4)
 
-#! C0 is not mentioned in the paper (?)
+#! C0 is the initial parameters
 C0 = np.array([[sigma ** 2, 0, 0, 0],
                [0, np.pi, 0, 0],
                [0, 0, sigma ** 2, 0],

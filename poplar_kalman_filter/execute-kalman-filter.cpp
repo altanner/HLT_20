@@ -21,12 +21,16 @@ using namespace poplar;
 using namespace poplar::program;
 using namespace popops;
 
-float d = 1.0;
-float sigma = 10E-2;
-int N = 5;
-float z = 0.1;
-float x0 = 0.01;
-float theta0 = 10E-3;
+//! comments with
+//* line numbers
+//! refer to tf_kalman_filter_2d.py
+
+float d = 1.0;         // Distance between planes
+float sigma = 10E-2;   // Resolution of planes
+int N = 5;             // Number of planes
+float z = 0.1;         // Thickness of absorber
+float x0 = 0.01;       // Radiation length of absorber
+float theta0 = 10E-3;  // Multiple scatter uncertainty
 
 int main(int argc, char const *argv[]) {
 
@@ -120,27 +124,42 @@ int main(int argc, char const *argv[]) {
 
     prog.add(Copy(inputs_batch[i].slice(0, 1, 0).reshape({5, 2}), inputs[i]));
 
-    covFlat[i] = graph.addConstant<float>(FLOAT, {16, 1}, {sigma * sigma, 0., 0., 0.,
-                                                          0., M_PI, 0., 0.,
-                                                          0., 0., sigma * sigma, 0.,
-                                                          0., 0., 0., M_PI
-                                                          });
+    //* line 25
+    //? why are these inside the loop? tf they are out.
+    //! initiate the matrices as tensors
+    //! F is the transfer matrix
+    Tensor fFlat = graph.addConstant<float>(FLOAT, {16, 1},
+                                           {1., 1., 0., 0.,
+                                           0., 1., 0., 0.,
+                                           0., 0., 1., 1.,
+                                           0., 0., 0., 1.});
 
+    //! G is the noise matrix
+    Tensor gFlat = graph.addConstant<float>(FLOAT, {16, 1},
+                                           {float(1.0)/(sigma * sigma), 0., 0., 0.,
+                                            0, 0., 0., 0.,
+                                            0, 0., float(1.0)/(sigma * sigma), 0.,
+                                            0, 0., 0., 0.});
+
+    //! H the relation between the measurement m and the state p
+    Tensor hFlat = graph.addConstant<float>(FLOAT, {16, 1},
+                                           {1., 0., 0., 0.,
+                                            0., 0., 0., 0.,
+                                            0., 0., 1., 0.,
+                                            0., 0., 0., 0.});
+
+    //! Q is the random error matrix, ie the scatter
     Tensor qFlat = graph.addConstant<float>(FLOAT, {16, 1}, {0.});
 
-    Tensor hFlat = graph.addConstant<float>(FLOAT, {16, 1}, {1., 0., 0., 0.,
-                                                             0., 0., 0., 0.,
-                                                             0., 0., 1., 0.,
-                                                             0., 0., 0., 0.});
-    Tensor fFlat = graph.addConstant<float>(FLOAT, {16, 1}, {1., 1., 0., 0.,
-                                                             0., 1., 0., 0.,
-                                                             0., 0., 1., 1.,
-                                                             0., 0., 0., 1.});
-    Tensor gFlat = graph.addConstant<float>(FLOAT, {16, 1}, {float(1.0)/(sigma * sigma), 0., 0., 0.,
-                                                             0, 0., 0., 0.,
-                                                             0, 0., float(1.0)/(sigma * sigma), 0.,
-                                                             0, 0., 0., 0.,
-                                                             });
+    //! cov is the initial parameters
+    //? why is this not a tensor?
+    covFlat[i] = graph.addConstant<float>(FLOAT, {16, 1},
+                                         {sigma * sigma, 0., 0., 0.,
+                                          0., M_PI, 0., 0.,
+                                          0., 0., sigma * sigma, 0.,
+                                          0., 0., 0., M_PI});
+
+
 
     d[i] = graph.addVariable(FLOAT, {1, 1}, "d" + iStr);
     dInit[i] = graph.addConstant<float>(FLOAT, {1, 1}, {1.});
@@ -228,12 +247,12 @@ int main(int argc, char const *argv[]) {
 
   }
 
-  // ChiSq computation
-
+  //* lines 69-100, residual and chi-squared
+  //! get residuals
   auto [resSeq, res] = KalmanFilter::calcResidual(graph, hits, p_filt_chi2, hs);
-
+  //! chi-squared
   auto [chiSqSeq, chiSq] = KalmanFilter::calcChiSq(graph, res, gs, C_proj_chi2, p_proj_chi2, p_filt_chi2);
-
+  //! chi test
   auto [chiSqTestSeq, chiSqTestPred] = KalmanFilter::chiSqTest(graph, chiSq, chiSqThreshold);
 
   // Update loop index
@@ -259,7 +278,7 @@ int main(int argc, char const *argv[]) {
   planeLoop.add(filterSeq);
 
   // Save proj and filt states for smoothing step
-
+  //* line 226 (?) ps = plane counts?
   for (uint i = 0; i < ps.size(); i++) {
 
     auto [append_p_proj_Seq, p_proj_new] = KalmanFilter::appendTo(graph, p_proj[i], loop[i], p_proj_all[i], i);
@@ -271,7 +290,7 @@ int main(int argc, char const *argv[]) {
     planeLoop.add(Execute(append_C_proj_Seq));
     planeLoop.add(Execute(append_p_filt_Seq));
     planeLoop.add(Execute(append_C_filt_Seq));
-
+    //! copy into proj and filt //? same as 239?
     planeLoop.add(Copy(p_proj_new, p_proj_all[i]));
     planeLoop.add(Copy(C_proj_new, C_proj_all[i]));
     planeLoop.add(Copy(p_filt_new, p_filt_all[i]));
@@ -324,6 +343,7 @@ int main(int argc, char const *argv[]) {
     prog.add(Copy(C[i], C_smooth[i]));
   }
 
+  //! 244?
   std::vector<Tensor> p_proj_smooth(inputs.size());
   std::vector<Tensor> C_proj_smooth(inputs.size());
   std::vector<Tensor> p_filt_smooth(inputs.size());
@@ -347,6 +367,7 @@ int main(int argc, char const *argv[]) {
     smoothLoop.add(Execute(sm_p_filt_seq));
     smoothLoop.add(Execute(sm_C_filt_seq));
 
+    //! C_smooth = C_proj_smooth
     p_proj_smooth[i] = p_proj;
     C_proj_smooth[i] = C_proj;
     p_filt_smooth[i] = p_filt;
@@ -390,7 +411,8 @@ int main(int argc, char const *argv[]) {
   Engine engine(graph, progMain);
   engine.load(dev);
 
-  // Test input
+  //! test input
+  //? why isn't this in tf?
   std::vector<float> v1 = {
     -0.02062073, -0.12062073,
     -0.02062073, -0.22062073,

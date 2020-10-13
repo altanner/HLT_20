@@ -158,7 +158,7 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
 
     plot_tracks = np.stack((x_plot_tracks, y_plot_tracks), -1)
 
-    # Fix me #! <<< what needs fixing?
+    # Fix me #? what needs fixing?
     msGauss = np.random.normal(np.zeros(plane_count),
                                scatter_errors,
                                (n_gen, plane_count))
@@ -166,13 +166,15 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
     x_hits = x_true_hits + msGauss #! apply scatter
     y_hits = y_true_hits + msGauss #! apply scatter
 
+    #! create discrete bins of x hits
     x_hit_map = np.digitize(x_hits, x_bins)
     x_digi_hits = x_bins[x_hit_map]
 
+    #! create discrete bins of y hits
     y_hit_map = np.digitize(y_hits, y_bins)
     y_digi_hits = y_bins[y_hit_map]
 
-    #! what is digi_hits? (see np docs)
+    #! combine both x and y hits into full hit map
     digi_hits = np.stack((x_digi_hits, y_digi_hits), -1)
 
     if exchange_hits: #! what is exchange hits?
@@ -182,7 +184,7 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
 
         fig = plt.figure(figsize=(8, 8))
 
-        ax = fig.add_subplot(2, 2, 1) #! this can be done nicer
+        ax = fig.add_subplot(2, 2, 1)
         plot_hits(plane_count, x_plot_tracks, x_digi_hits, x_range, "x", ax=ax)
 
         ax = fig.add_subplot(2, 2, 2)
@@ -191,7 +193,7 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
         ax = fig.add_subplot(2, 2, 3)
         plot_hits2d(plane_count, plot_tracks, digi_hits, x_range, y_range, ax=ax)
 
-        plt.savefig("multi.pdf")
+        plt.savefig("gen_tracks_out.pdf")
         plt.clf()
 
     if not truthOnly: #! ok.
@@ -202,7 +204,7 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
 
 if __name__ == "__main__":
 
-#    plot_config() #! does this do anything?!
-    gen_tracks(n_gen=100, plot=True) #! make pdf plot
-    #! this was me :/
-    print(gen_tracks(n_gen=100)) #! to go to vector file?
+#    plot_config() #! does this do anything?
+    gen_tracks(n_gen=1, plot=True) #! make pdf plot
+    #! (when not main, gentracks is called by tf_kalman)
+    print(gen_tracks(n_gen=1))
