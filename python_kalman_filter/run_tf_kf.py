@@ -1,16 +1,16 @@
-import sys #! unused
-import os #! unused
-import re #! unused
-import numpy as np #! unused
+import sys #~ unused
+import os #~ unused
+import re #~ unused
+import numpy as np #~ unused
 
 import json
 import subprocess as sp
-from tqdm import tqdm #! I can see where this goes (unused)
+from tqdm import tqdm #~ I can see where this goes (unused)
 
 
 tf_kf_py_file = "tf_kalman_filter_2d.py"
 
-#! eight batches, 2^24 - 2^16 #? why
+#~ eight batches, 2^24 - 2^16 #? why
 batch_sizes = [2 ** x for x in range(16, 18)][::-1]
 
 print(batch_sizes)
@@ -22,32 +22,32 @@ for batch_size in batch_sizes:
 
     name = f"{batch_size}"
 
-    #! this line used to refer to "kfTFVec.py", file absent.
-    #! changed to the tf file, "tf_kalman_filter_2d.py" - is this right?
+    #~ this line used to refer to "kfTFVec.py", file absent.
+    #~ changed to the tf file, "tf_kalman_filter_2d.py" - is this right?
     commandGPU = f"python {tf_kf_py_file} -n {batch_size}"
-    #! this file is absent
-    #! this file is the TF KF py >>
+    #~ this file is absent
+    #~ this file is the TF KF py >>
     commandGPUNoSkip = f"python kfTFVecNoSkip.py -n {batch_size}"
 
-    #! how do we know this is using GPU?
+    #~ how do we know this is using GPU?
     sp.check_output(commandGPU, shell=True)
 
     tot = 0
-    for i in range(5): #! mean of ten runs
+    for i in range(5): #~ mean of ten runs
 
         resultGPU = sp.check_output(commandGPU, shell=True)
-        #! this was the time output, now it is the matrices
+        #~ this was the time output, now it is the matrices
         resultGPU = float(str(resultGPU, "utf-8").strip("\n"))
-        tot += resultGPU #! hate this!
+        tot += resultGPU #~ hate this!
 
     timingsGPU[name] = tot / 5.0
 
-#! repeated
+#~ repeated
 #    commandGPU = f"python {tf_kf_py_file} -n {batch_size}"
-#! repeated
+#~ repeated
  #   sp.check_output(commandGPU, shell=True)
 
-#! we have no NoSkip file
+#~ we have no NoSkip file
     # tot = 0
     # for i in range(10):
 

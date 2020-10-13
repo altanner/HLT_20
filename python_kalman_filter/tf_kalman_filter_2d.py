@@ -22,35 +22,35 @@ z = 0.1               # Thickness of absorber
 x0 = 0.01             # Radiation length of absorber
 theta0 = 10e-3        # Multiple scattering uncertainty (TODO: use formula)
 
-#! initiate the matrices as numpy arrays
-#! F is the transfer matrix
+#~ initiate the matrices as numpy arrays
+#~ F is the transfer matrix
 F = np.array([[1, plane_distance, 0, 0],
               [0, 1, 0, 0],
               [0, 0, 1, plane_distance],
               [0, 0, 0, 1]])
 
-#! G is the noise matrix
+#~ G is the noise matrix
 G = np.array([[1 / sigma ** 2, 0, 0, 0],
               [0, 0, 0, 0],
               [0, 0, 1 / sigma ** 2, 0],
               [0, 0, 0, 0]])
 
-#! H the relation between the measurement m and the state p
+#~ H the relation between the measurement m and the state p
 H = np.array([[1, 0, 0, 0],
               [0, 0, 0, 0],
               [0, 0, 1, 0],
               [0, 0, 0, 0]])
 
-#! Q is the random error matrix, ie the scatter
+#~ Q is the random error matrix, ie the scatter
 Q = np.zeros(4)
 
-#! C0 is the initial parameters
+#~ C0 is the initial parameters
 C0 = np.array([[sigma ** 2, 0, 0, 0],
                [0, np.pi, 0, 0],
                [0, 0, sigma ** 2, 0],
                [0, 0, 0, np.pi]])
 
-#! Convert numpy arrays to tensors
+#~ Convert numpy arrays to tensors
 F_tensor = tf.constant(F, dtype=tf.float32)
 F_scalar = tf.constant(F_tensor, dtype=tf.float32)
 F = tf.Variable(np.tile(F_tensor, (n_gen, 1, 1)), dtype=tf.float32)
@@ -59,7 +59,7 @@ H = tf.constant(H, dtype=tf.float32)
 Q = tf.constant(Q, dtype=tf.float32)
 C0 = tf.constant(C0, dtype=tf.float32)
 
-#! initiate projected and filtered tracks and covariances
+#~ initiate projected and filtered tracks and covariances
 projectedTrack = None
 projectedCov = None
 filteredTrack = None
@@ -119,7 +119,7 @@ def filter(p_proj, C_proj, H, G, m):
     # Innermost two axies must be 'matrix'
     inv_C_proj = tf.linalg.inv(C_proj)
 
-    C = tf.linalg.inv(inv_C_proj + HG @ H) #! ? what takes precedence here? >>@?
+    C = tf.linalg.inv(inv_C_proj + HG @ H) #~ ? what takes precedence here? >>@?
 
     # Reversing batch dimension -> fix me!
     p = tf.einsum("Bij,Bj->Bi", inv_C_proj, p_proj) + tf.einsum("ji,iB->Bj", HG, m)
@@ -186,11 +186,11 @@ def project_and_filter_internal(
 
 if __name__ == "__main__":
 
-    # n_gen defined globally #!
-    #! input are generated tracks.
-    #! outputs are project track, proj covariance,
-    #!             smooth track, smooth covariance,
-    #!             filtered track, filtered covariance
+    # n_gen defined globally #~
+    #~ input are generated tracks.
+    #~ outputs are project track, proj covariance,
+    #~             smooth track, smooth covariance,
+    #~             filtered track, filtered covariance
     hits, trueTracks = gen_tracks(n_gen=n_gen)
     print("hits\n", hits, "\ntruetracks\n", trueTracks)
     hits = tf.constant(hits, dtype=tf.float32)
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 
     for i in range(1, plane_count):
 
-        #! project forward, filter /smooth backwards.
+        #~ project forward, filter /smooth backwards.
         p_proj, C_proj, p_filt, C_filt = project_and_filter_internal(
             tf.constant(i),
             m,
