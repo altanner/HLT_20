@@ -203,7 +203,8 @@ def gen_tracks(n_gen=10, truthOnly=False, plot=False, exchange_hits=False):
 
 if __name__ == "__main__":
 
+    #~ (gentracks is module in np and tf_kalman)
+
 #    plot_config() #~ tidy up plot calls
     gen_tracks(n_gen=1, plot=True) #~ make pdf plot
-    #~ (when not main, gentracks is called by tf_kalman)
     print(gen_tracks(n_gen=1))
