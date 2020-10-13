@@ -6,7 +6,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import matplotlib.ticker as plticker
-from genKFTracks2d import gen_tracks, x_range, y_range
+from generate_tracks import gen_tracks, x_range, y_range
 
 np.random.seed(42)
 
@@ -208,6 +208,8 @@ if __name__ == "__main__":
     start = time.perf_counter()
 
     n_gen = 7 #! send to args
+
+    #! generate some new tracks
     hits, trueTracks = gen_tracks(n_gen=n_gen)
 
     m0 = np.zeros((4, n_gen))
@@ -255,7 +257,6 @@ if __name__ == "__main__":
         projectedTrack.append(p_proj)
         projectedCov.append(C_proj)
 
-    #! this looks weird
     smoothedTrack = [None for i in range(plane_count - 1)] + [filteredTrack[-1]]
     smoothedCov = [None for i in range(plane_count - 1)] + [filteredCov[-1]]
 
@@ -319,5 +320,5 @@ if __name__ == "__main__":
                y_range,
                ax=ax)
 
-    plt.savefig("kfTracks.pdf")
+    plt.savefig("numpy_tracks.pdf")
     plt.clf()

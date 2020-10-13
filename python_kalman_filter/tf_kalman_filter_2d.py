@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 from pprint import pprint
 import tensorflow as tf
-from genKFTracks2d import gen_tracks
+from generate_tracks import gen_tracks
 
 np.random.seed(42)
 

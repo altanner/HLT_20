@@ -206,5 +206,5 @@ if __name__ == "__main__":
 
 #    plot_config() #! tidy up plot calls
     gen_tracks(n_gen=1, plot=True) #! make pdf plot
-    #! (above funcs go into np and tf kalman filter scripts)
+    #! (when not main, gentracks is called by tf_kalman)
     print(gen_tracks(n_gen=1))
