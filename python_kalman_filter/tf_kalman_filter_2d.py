@@ -1,8 +1,12 @@
+
+#~ imports from world
 import time
 import numpy as np
 import argparse
 from pprint import pprint
 import tensorflow as tf
+
+#~ imports from this repo
 from generate_tracks import gen_tracks
 
 np.random.seed(42)
@@ -70,7 +74,7 @@ def residual(hits, p_filtered, H):
 
     """Calculates the residuals between hit and fitted track
 
-    Takes: hits, p_filtered_, H
+    Takes: hits, p_filtered, H
 
     Returns: Tensor of residuals"""
 
@@ -87,7 +91,7 @@ def chiSquared(residual, G, C_proj, p_proj, p_filt):
     Parameters: residual (as a function), G, current projection,
     projected path, filtered path (?)
 
-    Returns: Tensor of ummm Einstein Summations?"""
+    Returns: Tensor of Einstein Summations?"""
 
     t1 = tf.einsum("iB,jB -> B", residual, G @ residual)
 
@@ -119,7 +123,7 @@ def filter(p_proj, C_proj, H, G, m):
     # Innermost two axies must be 'matrix'
     inv_C_proj = tf.linalg.inv(C_proj)
 
-    C = tf.linalg.inv(inv_C_proj + HG @ H) #~ ? what takes precedence here? >>@?
+    C = tf.linalg.inv(inv_C_proj + HG @ H) #~ ? what takes precedence here? @?
 
     # Reversing batch dimension -> fix me!
     p = tf.einsum("Bij,Bj->Bi", inv_C_proj, p_proj) + tf.einsum("ji,iB->Bj", HG, m)
@@ -146,9 +150,11 @@ def smooth(p_k1_smooth, p_k1_proj, C_k1_smooth, C_k1_proj, p_filtered, C_filtere
     return p_smooth, C_smooth
 
 
-def project_and_filter_internal(
-    i, m, hits, p, C, filteredTrack, filteredCov, projectedTrack, projectedCov
-):
+def project_and_filter_internal(i, m, hits, p, C,
+                                filteredTrack,
+                                filteredCov,
+                                projectedTrack,
+                                projectedCov):
 
     global F #* ?
 
@@ -186,7 +192,7 @@ def project_and_filter_internal(
 
 if __name__ == "__main__":
 
-    # n_gen defined globally #~
+    # n_gen defined globally
     #~ input are generated tracks.
     #~ outputs are project track, proj covariance,
     #~             smooth track, smooth covariance,
@@ -223,7 +229,7 @@ if __name__ == "__main__":
 
     for i in range(1, plane_count):
 
-        #~ project forward, filter /smooth backwards.
+        #~ project forward, filter / smooth backwards.
         p_proj, C_proj, p_filt, C_filt = project_and_filter_internal(
             tf.constant(i),
             m,

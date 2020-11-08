@@ -24,21 +24,21 @@ for batch_size in batch_sizes:
 
     #~ this line used to refer to "kfTFVec.py", file absent.
     #~ changed to the tf file, "tf_kalman_filter_2d.py" - is this right?
-    commandGPU = f"python {tf_kf_py_file} -n {batch_size}"
+    commandGPU = f"python3 {tf_kf_py_file} -n {batch_size}"
     #~ this file is absent
     #~ this file is the TF KF py >>
-    commandGPUNoSkip = f"python kfTFVecNoSkip.py -n {batch_size}"
+    commandGPUNoSkip = f"python3 kfTFVecNoSkip.py -n {batch_size}"
 
     #~ how do we know this is using GPU?
     sp.check_output(commandGPU, shell=True)
 
     tot = 0
-    for i in range(5): #~ mean of ten runs
+    for i in range(5): #~ mean of 5 runs
 
         resultGPU = sp.check_output(commandGPU, shell=True)
         #~ this was the time output, now it is the matrices
         resultGPU = float(str(resultGPU, "utf-8").strip("\n"))
-        tot += resultGPU #~ hate this!
+        tot += resultGPU
 
     timingsGPU[name] = tot / 5.0
 
