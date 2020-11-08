@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-
+#include <math.h>
 #include <boost/timer/timer.hpp>
 
 #include <poplar/DeviceManager.hpp>
