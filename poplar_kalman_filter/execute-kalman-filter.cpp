@@ -3,19 +3,26 @@
 #include <math.h>
 #include <boost/timer/timer.hpp>
 
+//~ poplar
 #include <poplar/DeviceManager.hpp>
 #include <poplar/IPUModel.hpp>
-
 #include <poplar/Engine.hpp>
 #include <poplar/Program.hpp>
+
+//~ poplin
 #include <poplin/codelets.hpp>
+
+//~ popops
 #include <popops/ElementWise.hpp>
 #include <popops/codelets.hpp>
 #include <popops/ExprOp.hpp>
 #include <popops/Pad.hpp>
+
+//~ poputil
 #include <poputil/TileMapping.hpp>
 
-#include "KalmanFilter.h"
+//~ hardware hookup
+#include "connectToIPU.h"
 
 using namespace poplar;
 using namespace poplar::program;
@@ -25,22 +32,23 @@ using namespace popops;
 //* line numbers
 //~ refer to tf_kalman_filter_2d.py
 
+int N = 5;             // Number of planes
 float d = 1.0;         // Distance between planes
 float sigma = 10E-2;   // Resolution of planes
-int N = 5;             // Number of planes
 float z = 0.1;         // Thickness of absorber
 float x0 = 0.01;       // Radiation length of absorber
 float theta0 = 10E-3;  // Multiple scatter uncertainty
 
 int main(int argc, char const *argv[]) {
 
-  Device dev = KalmanFilter::connectToIPU();
+  Device dev = connectToIPU::connectToIPU();
 
   // IPUModel ipuModel;
   // ipuModel.compileIPUCode = true;
 
   // Device dev = ipuModel.createDevice();
 
+  //~ instantiate graph
   Graph graph(dev.getTarget());
 
   popops::addCodelets(graph);
@@ -412,7 +420,6 @@ int main(int argc, char const *argv[]) {
   engine.load(dev);
 
   //~ test input
-  //? why isn't this in tf?
   std::vector<float> v1 = {
     -0.02062073, -0.12062073,
     -0.02062073, -0.22062073,
@@ -437,7 +444,7 @@ int main(int argc, char const *argv[]) {
 
   {
   boost::timer::auto_cpu_timer t;
-  engine.run(0);
+  engine.run(0); //~ check timing on this
   }
 
   return 0;
