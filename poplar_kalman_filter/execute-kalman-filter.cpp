@@ -41,18 +41,14 @@ float theta0 = 10E-3;    // Multiple scatter uncertainty
 
 int main(int argc, char const *argv[]) {
 
-    Device dev = connectToIPU::connectToIPU();
-
-    // IPUModel ipuModel;
-    // ipuModel.compileIPUCode = true;
-
-    // Device dev = ipuModel.createDevice();
+    Device dev = KalmanFilter::connectToIPU();
 
     //~ instantiate graph
     Graph graph(dev.getTarget());
 
     popops::addCodelets(graph);
     poplin::addCodelets(graph);
+
     graph.addCodelets("matrixInverseVertex.cpp");
     graph.addCodelets("matrixProductVertex.cpp");
     graph.addCodelets("scaledAddVertex.cpp");
@@ -64,10 +60,9 @@ int main(int argc, char const *argv[]) {
     std::vector<Tensor> inputs(n_inputs);
     std::vector<Tensor> inputs_batch(n_inputs);
 
-    for (uint i = 0; i < inputs.size(); i++) {
-
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         std::string iStr = std::to_string(i);
-
         inputs[i] = graph.addVariable(FLOAT, {5, 2}, "x_in" + iStr);
         inputs_batch[i] = graph.addVariable(FLOAT, {uint(batch_size), 5 * 2}, "x_in_batch" + iStr); // Check dims!
         graph.setTileMapping(inputs[i], i);
@@ -91,33 +86,30 @@ int main(int argc, char const *argv[]) {
     std::vector<Tensor> one(n_inputs);
     std::vector<Tensor> loop_batch(n_inputs);
     std::vector<Tensor> hitThisLoop(n_inputs);
-
+    //~ project
     std::vector<Tensor> p_proj_all(n_inputs);
     std::vector<Tensor> C_proj_all(n_inputs);
-
+    //~ filter
     std::vector<Tensor> p_filt_all(n_inputs);
     std::vector<Tensor> C_filt_all(n_inputs);
-
+    //~ smooth
     std::vector<Tensor> p_smooth(n_inputs);
     std::vector<Tensor> C_smooth(n_inputs);
 
-    for (uint i = 0; i < covs.size(); i++) {
-
+    for (uint i = 0; i < covs.size(); i++)
+    {
         std::string iStr = std::to_string(i);
-
         inStreams[i] = graph.addHostToDeviceFIFO("inStream" + iStr, FLOAT, 5 * 2 * batch_size);
         preProg.add(Copy(inStreams[i], inputs_batch[i]));
-
     }
 
     Sequence prog;
 
     std::vector<Tensor> covFlat(covs.size());
 
-    for (uint i = 0; i < covs.size(); i++) {
-
+    for (uint i = 0; i < covs.size(); i++)
+    {
         std::string iStr = std::to_string(i);
-
         loop[i] = graph.addVariable(INT, {1}, "loop");
         graph.setTileMapping(loop[i], i);
 
@@ -137,24 +129,24 @@ int main(int argc, char const *argv[]) {
         //~ initiate the matrices as tensors
         //~ F is the transfer matrix
         Tensor fFlat = graph.addConstant<float>(FLOAT, {16, 1},
-                                                                                     {1., 1., 0., 0.,
-                                                                                     0., 1., 0., 0.,
-                                                                                     0., 0., 1., 1.,
-                                                                                     0., 0., 0., 1.});
+                                                {1., 1., 0., 0.,
+                                                0., 1., 0., 0.,
+                                                0., 0., 1., 1.,
+                                                0., 0., 0., 1.});
 
         //~ G is the noise matrix
         Tensor gFlat = graph.addConstant<float>(FLOAT, {16, 1},
-                                                                                     {float(1.0)/(sigma * sigma), 0., 0., 0.,
-                                                                                        0, 0., 0., 0.,
-                                                                                        0, 0., float(1.0)/(sigma * sigma), 0.,
-                                                                                        0, 0., 0., 0.});
+                                                {float(1.0)/(sigma * sigma), 0., 0., 0.,
+                                                0, 0., 0., 0.,
+                                                0, 0., float(1.0)/(sigma * sigma), 0.,
+                                                0, 0., 0., 0.});
 
         //~ H the relation between the measurement m and the state p
         Tensor hFlat = graph.addConstant<float>(FLOAT, {16, 1},
-                                                                                     {1., 0., 0., 0.,
-                                                                                        0., 0., 0., 0.,
-                                                                                        0., 0., 1., 0.,
-                                                                                        0., 0., 0., 0.});
+                                                {1., 0., 0., 0.,
+                                                0., 0., 0., 0.,
+                                                0., 0., 1., 0.,
+                                                0., 0., 0., 0.});
 
         //~ Q is the random error matrix, ie the scatter
         Tensor qFlat = graph.addConstant<float>(FLOAT, {16, 1}, {0.});
@@ -162,12 +154,10 @@ int main(int argc, char const *argv[]) {
         //~ cov is the initial parameters
         //? why is this not a tensor?
         covFlat[i] = graph.addConstant<float>(FLOAT, {16, 1},
-                                                                                 {sigma * sigma, 0., 0., 0.,
-                                                                                    0., M_PI, 0., 0.,
-                                                                                    0., 0., sigma * sigma, 0.,
-                                                                                    0., 0., 0., M_PI});
-
-
+                                              {sigma * sigma, 0., 0., 0.,
+                                              0., M_PI, 0., 0.,
+                                              0., 0., sigma * sigma, 0.,
+                                              0., 0., 0., M_PI});
 
         d[i] = graph.addVariable(FLOAT, {1, 1}, "d" + iStr);
         dInit[i] = graph.addConstant<float>(FLOAT, {1, 1}, {1.});
@@ -196,7 +186,6 @@ int main(int argc, char const *argv[]) {
         graph.setTileMapping(C_smooth[i], i);
 
         qs[i] = qFlat.reshape({4, 4});
-
         hs[i] = hFlat.reshape({4, 4});
         gs[i] = gFlat.reshape({4, 4});
         fs[i] = fFlat.reshape({4, 4});
@@ -216,28 +205,33 @@ int main(int argc, char const *argv[]) {
         graph.setTileMapping(hs[i], i);
         graph.setTileMapping(gs[i], i);
         graph.setTileMapping(fs[i], i);
-    }
+
+    } //~ end for (uint i = 0; i < covs.size(); i++)
 
     // Init p with hits
-    auto [packIterationTensorsInit, ps] = KalmanFilter::packIterationTensors(graph, loop, scatterInto, inputs);
+    auto [packIterationTensorsInit, ps] =
+        KalmanFilter::packIterationTensors(graph, loop, scatterInto, inputs);
 
     prog.add(packIterationTensorsInit);
 
     // Prepare hits for each loop
-    auto [packIterationTensorsProg, hits] = KalmanFilter::packIterationTensors(graph, loop, scatterInto, inputs);
+    auto [packIterationTensorsProg, hits] =
+        KalmanFilter::packIterationTensors(graph, loop, scatterInto, inputs);
 
-    auto [projProg, p_proj, C_proj] = KalmanFilter::project(graph, ps, covs, fs, qs);
+    auto [projProg, p_proj, C_proj] =
+        KalmanFilter::project(graph, ps, covs, fs, qs);
 
-    auto [filterSeq, outP, C] = KalmanFilter::filter(graph, hs, gs, hits, p_proj, C_proj);
+    auto [filterSeq, outP, C] =
+        KalmanFilter::filter(graph, hs, gs, hits, p_proj, C_proj);
 
     std::vector<Tensor> p_proj_chi2(ps.size());
     std::vector<Tensor> p_filt_chi2(ps.size());
     std::vector<Tensor> C_proj_chi2(ps.size());
-
     std::vector<Tensor> chiSqThreshold(ps.size());
 
     // For chi2 calc, test
-    for (uint i = 0; i < ps.size(); i++) {
+    for (uint i = 0; i < ps.size(); i++)
+    {
 
         std::string iStr = std::to_string(i);
 
@@ -253,9 +247,9 @@ int main(int argc, char const *argv[]) {
         chiSqThreshold[i] = graph.addConstant<float>(FLOAT, {1}, {0.4});
         graph.setTileMapping(chiSqThreshold[i], i);
 
-    }
+    } //~ end for (uint i = 0; i < ps.size(); i++)
 
-        //* lines 69-100, residual and chi-squared
+    //* lines 69-100, residual and chi-squared
     //~ get residuals
     auto [resSeq, res] = KalmanFilter::calcResidual(graph, hits, p_filt_chi2, hs);
     //~ chi-squared
@@ -266,7 +260,8 @@ int main(int argc, char const *argv[]) {
     // Update loop index
     Sequence updateIterator;
 
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
 
         auto [computeIterate, itr] = KalmanFilter::iterate(graph, loop[i], i);
         updateIterator.add(Execute(computeIterate));
@@ -287,7 +282,8 @@ int main(int argc, char const *argv[]) {
 
     // Save proj and filt states for smoothing step
     //* line 226 (?) ps = plane counts?
-    for (uint i = 0; i < ps.size(); i++) {
+    for (uint i = 0; i < ps.size(); i++)
+    {
 
         auto [append_p_proj_Seq, p_proj_new] = KalmanFilter::appendTo(graph, p_proj[i], loop[i], p_proj_all[i], i);
         auto [append_C_proj_Seq, C_proj_new] = KalmanFilter::appendTo(graph, C_proj[i], loop[i], C_proj_all[i], i);
@@ -298,7 +294,7 @@ int main(int argc, char const *argv[]) {
         planeLoop.add(Execute(append_C_proj_Seq));
         planeLoop.add(Execute(append_p_filt_Seq));
         planeLoop.add(Execute(append_C_filt_Seq));
-        //~ copy into proj and filt //? same as 239?
+        //~ copy into proj and filt //? 239?
         planeLoop.add(Copy(p_proj_new, p_proj_all[i]));
         planeLoop.add(Copy(C_proj_new, C_proj_all[i]));
         planeLoop.add(Copy(p_filt_new, p_filt_all[i]));
@@ -323,7 +319,8 @@ int main(int argc, char const *argv[]) {
 
     // Set up p for next projection, using p_filt
     // Set up covs for next projection, using C(_filt)
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         planeLoop.add(Copy(outP[i], ps[i]));
         planeLoop.add(Copy(C[i], covs[i]));
     }
@@ -342,10 +339,10 @@ int main(int argc, char const *argv[]) {
 
     prog.add(poplar::program::Repeat(5, planeLoop));
 
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         // Reset iterator for smoothing step
         prog.add(Copy(zero[i], loop[i]));
-
         // Copy last filtered state to initial smoothing state
         prog.add(Copy(outP[i], p_smooth[i]));
         prog.add(Copy(C[i], C_smooth[i]));
@@ -359,7 +356,8 @@ int main(int argc, char const *argv[]) {
 
     Sequence smoothLoop;
 
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
 
         // Offset iterator for filtered states (when starting from idx == 0)
         auto [loopFiltSeq, loopFilt] = KalmanFilter::iterate(graph, loop[i], i);
@@ -381,16 +379,23 @@ int main(int argc, char const *argv[]) {
         p_filt_smooth[i] = p_filt;
         C_filt_smooth[i] = C_filt;
 
-    }
+    } //~ end for (uint i = 0; i < inputs.size(); i++)
 
-    auto [smoothSeq, p_smooth_new, C_smooth_new] = KalmanFilter::smooth(graph, p_smooth, C_smooth, p_filt_smooth, C_filt_smooth, p_proj_smooth, C_proj_smooth, fs);
+    auto [smoothSeq, p_smooth_new, C_smooth_new] = KalmanFilter::smooth(graph,
+                                                                        p_smooth,
+                                                                        C_smooth,
+                                                                        p_filt_smooth,
+                                                                        C_filt_smooth,
+                                                                        p_proj_smooth,
+                                                                        C_proj_smooth,
+                                                                        fs);
 
     smoothLoop.add(smoothSeq);
 
     smoothLoop.add(PrintTensor("p_smooth_new", p_smooth_new[0]));
 
-    for (uint i = 0; i < inputs.size(); i++) {
-
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         // Propagate last smoothed state
         smoothLoop.add(Copy(p_smooth_new[i], p_smooth[i]));
         smoothLoop.add(Copy(C_smooth_new[i], C_smooth[i]));
@@ -403,7 +408,8 @@ int main(int argc, char const *argv[]) {
 
     // After loop over planes, for the next in the batch:
 
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         // Reset plane iterator for next batch
         prog.add(Copy(zero[i], loop[i]));
     }
@@ -420,7 +426,8 @@ int main(int argc, char const *argv[]) {
     engine.load(dev);
 
     //~ test input
-    std::vector<float> v1 = {
+    std::vector<float> v1 =
+    {
         -0.02062073, -0.12062073,
         -0.02062073, -0.22062073,
         -0.12062073, -0.42062073,
@@ -429,16 +436,19 @@ int main(int argc, char const *argv[]) {
     };
 
     std::vector<std::vector<float>> vs;
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         // Instead of 1 * 5 inputs, N * 5 inputs
         std::vector<float> v10;
-        for (uint j = 0; j < batch_size; j++) {
+        for (uint j = 0; j < batch_size; j++)
+        {
             v10.insert(std::end(v10), std::begin(v1), std::end(v1));
         }
         vs.push_back(v10);
     }
 
-    for (uint i = 0; i < inputs.size(); i++) {
+    for (uint i = 0; i < inputs.size(); i++)
+    {
         engine.connectStream(inStreams[i], &vs[i][0], &vs[i][5 * 2 * batch_size]);
     }
 
