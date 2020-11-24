@@ -21,16 +21,12 @@
 //~ poputil
 #include <poputil/TileMapping.hpp>
 
-//~ KF hookup
+//~ KF header
 #include "KalmanFilter.h"
 
 using namespace poplar;
 using namespace poplar::program;
 using namespace popops;
-
-//~ comments with
-//* line numbers
-//~ refer to tf_kalman_filter_2d.py
 
 int N = 5;                         // Number of planes
 float d = 1.0;                 // Distance between planes
@@ -39,7 +35,8 @@ float z = 0.1;                 // Thickness of absorber
 float x0 = 0.01;             // Radiation length of absorber
 float theta0 = 10E-3;    // Multiple scatter uncertainty
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
 
     Device dev = KalmanFilter::connectToIPU();
 
@@ -152,7 +149,6 @@ int main(int argc, char const *argv[]) {
         Tensor qFlat = graph.addConstant<float>(FLOAT, {16, 1}, {0.});
 
         //~ cov is the initial parameters
-        //? why is this not a tensor?
         covFlat[i] = graph.addConstant<float>(FLOAT, {16, 1},
                                               {sigma * sigma, 0., 0., 0.,
                                               0., M_PI, 0., 0.,
@@ -232,7 +228,6 @@ int main(int argc, char const *argv[]) {
     // For chi2 calc, test
     for (uint i = 0; i < ps.size(); i++)
     {
-
         std::string iStr = std::to_string(i);
 
         p_proj_chi2[i] = graph.addVariable(FLOAT, {4, 1}, "p_proj_chi2" + iStr);
@@ -246,27 +241,27 @@ int main(int argc, char const *argv[]) {
 
         chiSqThreshold[i] = graph.addConstant<float>(FLOAT, {1}, {0.4});
         graph.setTileMapping(chiSqThreshold[i], i);
-
     } //~ end for (uint i = 0; i < ps.size(); i++)
 
     //* lines 69-100, residual and chi-squared
     //~ get residuals
-    auto [resSeq, res] = KalmanFilter::calcResidual(graph, hits, p_filt_chi2, hs);
+    auto [resSeq, res] =
+        KalmanFilter::calcResidual(graph, hits, p_filt_chi2, hs);
     //~ chi-squared
-    auto [chiSqSeq, chiSq] = KalmanFilter::calcChiSq(graph, res, gs, C_proj_chi2, p_proj_chi2, p_filt_chi2);
+    auto [chiSqSeq, chiSq] =
+        KalmanFilter::calcChiSq(graph, res, gs, C_proj_chi2, p_proj_chi2, p_filt_chi2);
     //~ chi test
-    auto [chiSqTestSeq, chiSqTestPred] = KalmanFilter::chiSqTest(graph, chiSq, chiSqThreshold);
+    auto [chiSqTestSeq, chiSqTestPred] =
+        KalmanFilter::chiSqTest(graph, chiSq, chiSqThreshold);
 
     // Update loop index
     Sequence updateIterator;
 
     for (uint i = 0; i < inputs.size(); i++)
     {
-
         auto [computeIterate, itr] = KalmanFilter::iterate(graph, loop[i], i);
         updateIterator.add(Execute(computeIterate));
         updateIterator.add(Copy(itr, loop[i]));
-
     }
 
     Sequence planeLoop;
@@ -284,7 +279,6 @@ int main(int argc, char const *argv[]) {
     //* line 226 (?) ps = plane counts?
     for (uint i = 0; i < ps.size(); i++)
     {
-
         auto [append_p_proj_Seq, p_proj_new] = KalmanFilter::appendTo(graph, p_proj[i], loop[i], p_proj_all[i], i);
         auto [append_C_proj_Seq, C_proj_new] = KalmanFilter::appendTo(graph, C_proj[i], loop[i], C_proj_all[i], i);
         auto [append_p_filt_Seq, p_filt_new] = KalmanFilter::appendTo(graph, outP[i], loop[i], p_filt_all[i], i);
@@ -299,7 +293,6 @@ int main(int argc, char const *argv[]) {
         planeLoop.add(Copy(C_proj_new, C_proj_all[i]));
         planeLoop.add(Copy(p_filt_new, p_filt_all[i]));
         planeLoop.add(Copy(C_filt_new, C_filt_all[i]));
-
     }
 
     // For chi2 calc, test
@@ -358,15 +351,19 @@ int main(int argc, char const *argv[]) {
 
     for (uint i = 0; i < inputs.size(); i++)
     {
-
         // Offset iterator for filtered states (when starting from idx == 0)
         auto [loopFiltSeq, loopFilt] = KalmanFilter::iterate(graph, loop[i], i);
+
         smoothLoop.add(Execute(loopFiltSeq));
 
-        auto [sm_p_proj_seq, p_proj] = KalmanFilter::smoothingState(graph, p_proj_all[i], loop[i], i);
-        auto [sm_C_proj_seq, C_proj] = KalmanFilter::smoothingState(graph, C_proj_all[i], loop[i], i);
-        auto [sm_p_filt_seq, p_filt] = KalmanFilter::smoothingState(graph, p_filt_all[i], loopFilt, i);
-        auto [sm_C_filt_seq, C_filt] = KalmanFilter::smoothingState(graph, C_filt_all[i], loopFilt, i);
+        auto [sm_p_proj_seq, p_proj] =
+            KalmanFilter::smoothingState(graph, p_proj_all[i], loop[i], i);
+        auto [sm_C_proj_seq, C_proj] =
+            KalmanFilter::smoothingState(graph, C_proj_all[i], loop[i], i);
+        auto [sm_p_filt_seq, p_filt] =
+            KalmanFilter::smoothingState(graph, p_filt_all[i], loopFilt, i);
+        auto [sm_C_filt_seq, C_filt] =
+            KalmanFilter::smoothingState(graph, C_filt_all[i], loopFilt, i);
 
         smoothLoop.add(Execute(sm_p_proj_seq));
         smoothLoop.add(Execute(sm_C_proj_seq));
@@ -378,17 +375,17 @@ int main(int argc, char const *argv[]) {
         C_proj_smooth[i] = C_proj;
         p_filt_smooth[i] = p_filt;
         C_filt_smooth[i] = C_filt;
-
     } //~ end for (uint i = 0; i < inputs.size(); i++)
 
-    auto [smoothSeq, p_smooth_new, C_smooth_new] = KalmanFilter::smooth(graph,
-                                                                        p_smooth,
-                                                                        C_smooth,
-                                                                        p_filt_smooth,
-                                                                        C_filt_smooth,
-                                                                        p_proj_smooth,
-                                                                        C_proj_smooth,
-                                                                        fs);
+    auto [smoothSeq, p_smooth_new, C_smooth_new] =
+        KalmanFilter::smooth(graph,
+                             p_smooth,
+                             C_smooth,
+                             p_filt_smooth,
+                             C_filt_smooth,
+                             p_proj_smooth,
+                             C_proj_smooth,
+                             fs);
 
     smoothLoop.add(smoothSeq);
 
@@ -436,6 +433,7 @@ int main(int argc, char const *argv[]) {
     };
 
     std::vector<std::vector<float>> vs;
+
     for (uint i = 0; i < inputs.size(); i++)
     {
         // Instead of 1 * 5 inputs, N * 5 inputs
@@ -458,4 +456,5 @@ int main(int argc, char const *argv[]) {
     }
 
     return 0;
-}
+
+} //~ end main
