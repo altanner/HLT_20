@@ -452,7 +452,7 @@ int main(int argc, char const *argv[])
 
     {
     boost::timer::auto_cpu_timer t;
-    engine.run(0); //~ check timing on this
+    engine.run(0); //~ run things
     }
 
     return 0;
