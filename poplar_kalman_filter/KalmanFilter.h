@@ -136,4 +136,4 @@ namespace KalmanFilter
         const std::vector<Tensor> &C_proj,
         const std::vector<Tensor> &F);
 
-} // namespace KalmanFilter
+} //~ end namespace KalmanFilter

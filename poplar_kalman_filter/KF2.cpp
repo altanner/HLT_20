@@ -106,6 +106,7 @@ KalmanFilter::smoothingState(Graph &graph,
 {
     ComputeSet computeSet =
         graph.addComputeSet("smoothingState" + std::to_string(tile));
+
     VertexRef vtx = graph.addVertex(computeSet, "StateForSmoothing");
     graph.setCycleEstimate(vtx, 100);
 
@@ -171,8 +172,10 @@ KalmanFilter::inverse(Graph &graph,
 {
 
     ComputeSet computeSet = graph.addComputeSet("inverse" + std::to_string(tile));
+
     VertexRef vtx =
             graph.addVertex(computeSet, "MatrixInverse" + std::to_string(dim));
+
     graph.setCycleEstimate(vtx, 100);
 
     Tensor out =
@@ -193,7 +196,9 @@ std::tuple<ComputeSet, Tensor> KalmanFilter::packHits(Graph &graph,
                                                       uint tile) {
     ComputeSet computeSet =
             graph.addComputeSet("packHits4" + std::to_string(tile));
+
     VertexRef vtx = graph.addVertex(computeSet, "PackHits4");
+
     graph.setCycleEstimate(vtx, 10);
 
     // Same shape as ps
@@ -203,6 +208,7 @@ std::tuple<ComputeSet, Tensor> KalmanFilter::packHits(Graph &graph,
     graph.connect(vtx["inputHits"], inputHits);
     graph.connect(vtx["itr"], itr);
     graph.connect(vtx["out"], out);
+
     graph.setTileMapping(vtx, tile);
     graph.setTileMapping(out, tile);
 
