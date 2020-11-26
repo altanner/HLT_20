@@ -19,6 +19,28 @@
 
 #include "KalmanFilter.h"
 
+/*
+~01 KalmanFilter::connectToIPU
+~02 KalmanFilter::skipSwitch
+~03 KalmanFilter::smoothingState
+~04 KalmanFilter::appendTo
+~05 KalmanFilter::inverse
+~06 KalmanFilter::packHits
+~07 KalmanFilter::iterate
+~08 KalmanFilter::product
+~09 KalmanFilter::scaledAdd
+~10 KalmanFilter::filter
+~11 KalmanFilter::propagateState
+~12 KalmanFilter::jacobian
+~13 KalmanFilter::projectEKF
+~14 KalmanFilter::project
+~15 KalmanFilter::packIterationTensors
+~16 KalmanFilter::calcResidual
+~17 KalmanFilter::calcChiSq
+~18 KalmanFilter::chiSqTest
+~19 KalmanFilter::smooth
+*/
+
 using namespace poplar;
 using namespace poplar::program;
 using namespace popops;
@@ -30,7 +52,6 @@ Device KalmanFilter::connectToIPU()
     DeviceManager manager = DeviceManager::createDeviceManager();
     Device dev;
 
-    // Attempt to connect to a single IPU
     bool success = false;
 
     for (auto &d : manager.getDevices(poplar::TargetType::IPU, 1))
@@ -276,7 +297,7 @@ KalmanFilter::product(Graph &graph,
 
     return std::make_pair(computeSet, out);
 
-}
+} //~ end KalmanFilter::product
 
 
 std::tuple<ComputeSet, Tensor>

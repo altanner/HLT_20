@@ -1,5 +1,4 @@
 // export POPLAR_ENGINE_OPTIONS='{"target.workerStackSizeInBytes":1024}'
-
 #pragma once
 
 #include <vector>
@@ -11,6 +10,27 @@ using namespace poplar;
 using namespace poplar::program;
 using namespace popops;
 
+/*
+~01 KalmanFilter::connectToIPU
+~02 KalmanFilter::skipSwitch
+~03 KalmanFilter::smoothingState
+~04 KalmanFilter::appendTo
+~05 KalmanFilter::inverse
+~06 KalmanFilter::packHits
+~07 KalmanFilter::iterate
+~08 KalmanFilter::product
+~09 KalmanFilter::scaledAdd
+~10 KalmanFilter::filter
+~11 KalmanFilter::propagateState
+~12 KalmanFilter::jacobian
+~13 KalmanFilter::projectEKF
+~14 KalmanFilter::project
+~15 KalmanFilter::packIterationTensors
+~16 KalmanFilter::calcResidual
+~17 KalmanFilter::calcChiSq
+~18 KalmanFilter::chiSqTest
+~19 KalmanFilter::smooth
+*/
 namespace KalmanFilter
 {
 
@@ -109,31 +129,31 @@ namespace KalmanFilter
     // Residual at step t
     std::tuple<Sequence, std::vector<Tensor>>
     calcResidual(Graph &graph,
-                const std::vector<Tensor> &hits,
-                const std::vector<Tensor> &p_filt,
-                const std::vector<Tensor> &H);
+                 const std::vector<Tensor> &hits,
+                 const std::vector<Tensor> &p_filt,
+                 const std::vector<Tensor> &H);
 
     std::tuple<Sequence, std::vector<Tensor>>
     calcChiSq(Graph &graph,
-            const std::vector<Tensor> &res_filt,
-            const std::vector<Tensor> &G,
-            const std::vector<Tensor> &C_proj,
-            const std::vector<Tensor> &p_proj,
-            const std::vector<Tensor> &p_filt);
+              const std::vector<Tensor> &res_filt,
+              const std::vector<Tensor> &G,
+              const std::vector<Tensor> &C_proj,
+              const std::vector<Tensor> &p_proj,
+              const std::vector<Tensor> &p_filt);
 
     std::tuple<Sequence, std::vector<Tensor>>
     chiSqTest(Graph &graph,
-            const std::vector<Tensor> &chiSq,
-            const std::vector<Tensor> &threshold);
+              const std::vector<Tensor> &chiSq,
+              const std::vector<Tensor> &threshold);
 
     std::tuple<Sequence, std::vector<Tensor>, std::vector<Tensor>>
     smooth(Graph &graph,
-        const std::vector<Tensor> &p_smooth_prev,
-        const std::vector<Tensor> &C_smooth_prev,
-        const std::vector<Tensor> &p_filt,
-        const std::vector<Tensor> &C_filt,
-        const std::vector<Tensor> &p_proj,
-        const std::vector<Tensor> &C_proj,
-        const std::vector<Tensor> &F);
+           const std::vector<Tensor> &p_smooth_prev,
+           const std::vector<Tensor> &C_smooth_prev,
+           const std::vector<Tensor> &p_filt,
+           const std::vector<Tensor> &C_filt,
+           const std::vector<Tensor> &p_proj,
+           const std::vector<Tensor> &C_proj,
+           const std::vector<Tensor> &F);
 
 } //~ end namespace KalmanFilter

@@ -28,11 +28,11 @@ using namespace poplar;
 using namespace poplar::program;
 using namespace popops;
 
-int N = 5;                         // Number of planes
-float d = 1.0;                 // Distance between planes
+int N = 5;               // Number of planes
+float d = 1.0;           // Distance between planes
 float sigma = 10E-2;     // Resolution of planes
-float z = 0.1;                 // Thickness of absorber
-float x0 = 0.01;             // Radiation length of absorber
+float z = 0.1;           // Thickness of absorber
+float x0 = 0.01;         // Radiation length of absorber
 float theta0 = 10E-3;    // Multiple scatter uncertainty
 
 int main(int argc, char const *argv[])
@@ -122,7 +122,7 @@ int main(int argc, char const *argv[])
         prog.add(Copy(inputs_batch[i].slice(0, 1, 0).reshape({5, 2}), inputs[i]));
 
         //* line 25
-        //? why are these inside the loop? tf they are out.
+        //? why are these inside the loop? tf they are out(?)
         //~ initiate the matrices as tensors
         //~ F is the transfer matrix
         Tensor fFlat = graph.addConstant<float>(FLOAT, {16, 1},
@@ -396,7 +396,6 @@ int main(int argc, char const *argv[])
         // Propagate last smoothed state
         smoothLoop.add(Copy(p_smooth_new[i], p_smooth[i]));
         smoothLoop.add(Copy(C_smooth_new[i], C_smooth[i]));
-
     }
 
     smoothLoop.add(updateIterator);
