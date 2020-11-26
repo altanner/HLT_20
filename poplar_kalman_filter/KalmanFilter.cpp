@@ -2,21 +2,27 @@
 
 #include <iostream>
 #include <vector>
-
 #include <boost/timer/timer.hpp>
 
+//~ poplar
 #include <poplar/DeviceManager.hpp>
 #include <poplar/IPUModel.hpp>
-
 #include <poplar/Engine.hpp>
 #include <poplar/Program.hpp>
+
+//~ poplin
 #include <poplin/codelets.hpp>
+
+//~ popops
 #include <popops/ElementWise.hpp>
 #include <popops/ExprOp.hpp>
 #include <popops/Pad.hpp>
 #include <popops/codelets.hpp>
+
+//~ poputil
 #include <poputil/TileMapping.hpp>
 
+//~ KF header
 #include "KalmanFilter.h"
 
 /*

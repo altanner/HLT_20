@@ -37,26 +37,36 @@ float theta0 = 10E-3;    // Multiple scatter uncertainty
 
 int main(int argc, char const *argv[])
 {
-
+/*
+refactor:
+we want this to be put into a class structure, where the setup
+and the processing are logical units
+the chisq blocks are functional, but will confuse things, so
+don't worry about those for now.
+the jacobian and EKF are not needed (in the funcs file)
+as a solution was found without resorting to linearising
+non-linear aspects of the filter.
+*/
     Device dev = KalmanFilter::connectToIPU();
 
     //~ instantiate graph
     Graph graph(dev.getTarget());
 
+    //~ codelet declarations
     popops::addCodelets(graph);
     poplin::addCodelets(graph);
-
     graph.addCodelets("matrixInverseVertex.cpp");
     graph.addCodelets("matrixProductVertex.cpp");
     graph.addCodelets("scaledAddVertex.cpp");
     graph.addCodelets("packHitsVertex.cpp");
 
+    //~ input declarations
     int n_inputs = 1;
     int batch_size = 1;
-
     std::vector<Tensor> inputs(n_inputs);
     std::vector<Tensor> inputs_batch(n_inputs);
 
+    //~ tile mapping loop
     for (uint i = 0; i < inputs.size(); i++)
     {
         std::string iStr = std::to_string(i);
@@ -68,6 +78,7 @@ int main(int argc, char const *argv[])
 
     Sequence preProg;
 
+    //~ declarations
     std::vector<DataStream> inStreams(n_inputs);
     std::vector<Tensor> covs(n_inputs);
     std::vector<Tensor> qs(n_inputs);
@@ -93,6 +104,7 @@ int main(int argc, char const *argv[])
     std::vector<Tensor> p_smooth(n_inputs);
     std::vector<Tensor> C_smooth(n_inputs);
 
+    //~ add host to device loop
     for (uint i = 0; i < covs.size(); i++)
     {
         std::string iStr = std::to_string(i);
@@ -102,8 +114,10 @@ int main(int argc, char const *argv[])
 
     Sequence prog;
 
+    //~ declare flattened covariance tensor
     std::vector<Tensor> covFlat(covs.size());
 
+    //~ build transfer, noise, Q and cov matrices
     for (uint i = 0; i < covs.size(); i++)
     {
         std::string iStr = std::to_string(i);
@@ -225,7 +239,7 @@ int main(int argc, char const *argv[])
     std::vector<Tensor> C_proj_chi2(ps.size());
     std::vector<Tensor> chiSqThreshold(ps.size());
 
-    // For chi2 calc, test
+    //~ For chi2 calc, test
     for (uint i = 0; i < ps.size(); i++)
     {
         std::string iStr = std::to_string(i);
@@ -279,20 +293,30 @@ int main(int argc, char const *argv[])
     //* line 226 (?) ps = plane counts?
     for (uint i = 0; i < ps.size(); i++)
     {
-        auto [append_p_proj_Seq, p_proj_new] = KalmanFilter::appendTo(graph, p_proj[i], loop[i], p_proj_all[i], i);
-        auto [append_C_proj_Seq, C_proj_new] = KalmanFilter::appendTo(graph, C_proj[i], loop[i], C_proj_all[i], i);
-        auto [append_p_filt_Seq, p_filt_new] = KalmanFilter::appendTo(graph, outP[i], loop[i], p_filt_all[i], i);
-        auto [append_C_filt_Seq, C_filt_new] = KalmanFilter::appendTo(graph, C[i], loop[i], C_filt_all[i], i);
+
+        auto [append_p_proj_Seq, p_proj_new] =
+            KalmanFilter::appendTo(graph, p_proj[i], loop[i], p_proj_all[i], i);
+
+        auto [append_C_proj_Seq, C_proj_new] =
+            KalmanFilter::appendTo(graph, C_proj[i], loop[i], C_proj_all[i], i);
+
+        auto [append_p_filt_Seq, p_filt_new] =
+            KalmanFilter::appendTo(graph, outP[i], loop[i], p_filt_all[i], i);
+
+        auto [append_C_filt_Seq, C_filt_new] =
+            KalmanFilter::appendTo(graph, C[i], loop[i], C_filt_all[i], i);
 
         planeLoop.add(Execute(append_p_proj_Seq));
         planeLoop.add(Execute(append_C_proj_Seq));
         planeLoop.add(Execute(append_p_filt_Seq));
         planeLoop.add(Execute(append_C_filt_Seq));
+
         //~ copy into proj and filt //? 239?
         planeLoop.add(Copy(p_proj_new, p_proj_all[i]));
         planeLoop.add(Copy(C_proj_new, C_proj_all[i]));
         planeLoop.add(Copy(p_filt_new, p_filt_all[i]));
         planeLoop.add(Copy(C_filt_new, C_filt_all[i]));
+
     }
 
     // For chi2 calc, test
@@ -320,10 +344,11 @@ int main(int argc, char const *argv[])
 
     // for (uint i = 0; i < inputs.size(); i++) {
     //
-    //     auto [skipSwitchSeq, switchP, switchC, outD] = skipSwitch(graph, ps[i], covs[i],
-    //                                                                                                         outP[i], C[i],
-    //                                                                                                         chiSq[i],
-    //                                                                                                         i);
+    //     auto [skipSwitchSeq, switchP, switchC, outD] =
+    //         skipSwitch(graph, ps[i], covs[i],
+    //                    outP[i], C[i],
+    //                    chiSq[i],
+    //                    i);
     //     planeLoop.add(Execute(skipSwitchSeq));
     //     planeLoop.add(Copy(switchP, ps[i]));
     //     planeLoop.add(Copy(switchC, covs[i]));
@@ -358,10 +383,13 @@ int main(int argc, char const *argv[])
 
         auto [sm_p_proj_seq, p_proj] =
             KalmanFilter::smoothingState(graph, p_proj_all[i], loop[i], i);
+
         auto [sm_C_proj_seq, C_proj] =
             KalmanFilter::smoothingState(graph, C_proj_all[i], loop[i], i);
+
         auto [sm_p_filt_seq, p_filt] =
             KalmanFilter::smoothingState(graph, p_filt_all[i], loopFilt, i);
+
         auto [sm_C_filt_seq, C_filt] =
             KalmanFilter::smoothingState(graph, C_filt_all[i], loopFilt, i);
 
@@ -375,6 +403,7 @@ int main(int argc, char const *argv[])
         C_proj_smooth[i] = C_proj;
         p_filt_smooth[i] = p_filt;
         C_filt_smooth[i] = C_filt;
+
     } //~ end for (uint i = 0; i < inputs.size(); i++)
 
     auto [smoothSeq, p_smooth_new, C_smooth_new] =
@@ -444,11 +473,15 @@ int main(int argc, char const *argv[])
         vs.push_back(v10);
     }
 
+    //~ connect stream to engine loop
     for (uint i = 0; i < inputs.size(); i++)
     {
-        engine.connectStream(inStreams[i], &vs[i][0], &vs[i][5 * 2 * batch_size]);
+        engine.connectStream(inStreams[i],
+                             &vs[i][0],
+                             &vs[i][5 * 2 * batch_size]);
     }
 
+    //~ why is this in brackets?
     {
     boost::timer::auto_cpu_timer t;
     engine.run(0); //~ run things

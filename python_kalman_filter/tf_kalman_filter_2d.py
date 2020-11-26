@@ -277,4 +277,4 @@ if __name__ == "__main__":
 
     print(f"Time elapsed: {end - start}")
 
-    print(f"Projected\n {p_proj} \n Filtered\n {p_filt} \n Smooth\n {p_smooth}")
+    print(f"Projected\n {p_proj} \n Filtered\n {p_filt} \n Smooth\n {p_smooth} \n SmCov\n {C_smooth}")
