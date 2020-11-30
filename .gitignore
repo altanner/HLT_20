@@ -7,6 +7,7 @@ HLT_20.code-workspace
 */*.json
 legacy/
 poplar_kalman_filter/boost_1_74_0
+poplar_kalman_filter/Makefile
 python_kalman_filter/env_sept20
 python_kalman_filter/venv_3.8.6
 python_kalman_filter/env_mba
