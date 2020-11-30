@@ -23,10 +23,12 @@
 
 //~ KF header
 #include "KalmanFilter.h"
+//#include "refactor.cpp"
+//#include "execute-kalman-filter.h"
 
+using namespace popops;
 using namespace poplar;
 using namespace poplar::program;
-using namespace popops;
 
 int N = 5;               // Number of planes
 float d = 1.0;           // Distance between planes
@@ -52,14 +54,6 @@ non-linear aspects of the filter.
     //~ instantiate graph
     Graph graph(dev.getTarget());
 
-    //~ codelet declarations
-    popops::addCodelets(graph);
-    poplin::addCodelets(graph);
-    graph.addCodelets("matrixInverseVertex.cpp");
-    graph.addCodelets("matrixProductVertex.cpp");
-    graph.addCodelets("scaledAddVertex.cpp");
-    graph.addCodelets("packHitsVertex.cpp");
-
     //~ input declarations
     int n_inputs = 1;
     int batch_size = 1;
@@ -76,9 +70,15 @@ non-linear aspects of the filter.
         graph.setTileMapping(inputs_batch[i], i);
     }
 
-    Sequence preProg;
+    //~ set up codelets
+    popops::addCodelets(graph);
+    poplin::addCodelets(graph);
+    graph.addCodelets("matrixInverseVertex.cpp");
+    graph.addCodelets("matrixProductVertex.cpp");
+    graph.addCodelets("scaledAddVertex.cpp");
+    graph.addCodelets("packHitsVertex.cpp");
 
-    //~ declarations
+    //~ tensor declarations
     std::vector<DataStream> inStreams(n_inputs);
     std::vector<Tensor> covs(n_inputs);
     std::vector<Tensor> qs(n_inputs);
@@ -103,8 +103,11 @@ non-linear aspects of the filter.
     //~ smooth
     std::vector<Tensor> p_smooth(n_inputs);
     std::vector<Tensor> C_smooth(n_inputs);
+    //~ flattened covariance tensor
+    std::vector<Tensor> covFlat(covs.size());
 
     //~ add host to device loop
+    Sequence preProg;
     for (uint i = 0; i < covs.size(); i++)
     {
         std::string iStr = std::to_string(i);
@@ -112,12 +115,8 @@ non-linear aspects of the filter.
         preProg.add(Copy(inStreams[i], inputs_batch[i]));
     }
 
-    Sequence prog;
-
-    //~ declare flattened covariance tensor
-    std::vector<Tensor> covFlat(covs.size());
-
     //~ build transfer, noise, Q and cov matrices
+    Sequence prog;
     for (uint i = 0; i < covs.size(); i++)
     {
         std::string iStr = std::to_string(i);
@@ -205,10 +204,8 @@ non-linear aspects of the filter.
         graph.setTileMapping(d[i], i);
         graph.setTileMapping(dInit[i], i);
         graph.setTileMapping(dSkip[i], i);
-
         graph.setTileMapping(covs[i], i);
         graph.setTileMapping(qs[i], i);
-
         graph.setTileMapping(gFlat, i);
         graph.setTileMapping(hFlat, i);
         graph.setTileMapping(fFlat, i);
@@ -270,7 +267,6 @@ non-linear aspects of the filter.
 
     // Update loop index
     Sequence updateIterator;
-
     for (uint i = 0; i < inputs.size(); i++)
     {
         auto [computeIterate, itr] = KalmanFilter::iterate(graph, loop[i], i);
@@ -279,13 +275,7 @@ non-linear aspects of the filter.
     }
 
     Sequence planeLoop;
-
     planeLoop.add(packIterationTensorsProg);
-
-    // For EKF
-    // planeLoop.add(stateProg);
-    // planeLoop.add(jacProg);
-
     planeLoop.add(projProg);
     planeLoop.add(filterSeq);
 

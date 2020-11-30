@@ -184,6 +184,7 @@ def project_and_filter_internal(i, m, hits, p, C,
     # F = tf.tensor_scatter_nd_update(F, skipIdxs, tf.squeeze(tf.gather(F, skipIdxs), axis = 1) + updF)
 
     # TODO: Sort out this transpose nightmare....
+    #? why what's wrong with it?
     p_filt = tf.transpose(p_filt)
     C_filt = tf.transpose(C_filt, (1, 2, 0))
 
