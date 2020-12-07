@@ -1,3 +1,4 @@
+#for gc00.dice
 #CXX ?= c++
 
 #CXXFLAGS=-std=c++17 -D_GLIBCXX_USE_CXX11_ABI=0
@@ -10,7 +11,7 @@
 	#$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LIBS) KalmanFilter.cpp execute-kalman-filter.cpp -o kalman-filter
 
 
-
+#for graphcore's resident machine
 CXX ?= c++
 
 all:
