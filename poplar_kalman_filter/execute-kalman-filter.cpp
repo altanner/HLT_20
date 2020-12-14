@@ -49,28 +49,29 @@ the jacobian and EKF are not needed (in the funcs file)
 as a solution was found without resorting to linearising
 non-linear aspects of the filter.
 */
+
     Device dev = KalmanFilter::connectToIPU();
 
     //~ instantiate graph
     Graph graph(dev.getTarget());
 
-    //~ input declarations
+    //~ convert inputs to tensors
     int n_inputs = 1;
     int batch_size = 1;
     std::vector<Tensor> inputs(n_inputs);
     std::vector<Tensor> inputs_batch(n_inputs);
 
-    //~ tile mapping loop
+    //~ map input tensors to IPU tiles
     for (uint i = 0; i < inputs.size(); i++)
     {
-        std::string iStr = std::to_string(i);
+        std::string iStr = std::to_string(i); //? what is iStr? input string of what?
         inputs[i] = graph.addVariable(FLOAT, {5, 2}, "x_in" + iStr);
         inputs_batch[i] = graph.addVariable(FLOAT, {uint(batch_size), 5 * 2}, "x_in_batch" + iStr); // Check dims!
         graph.setTileMapping(inputs[i], i);
         graph.setTileMapping(inputs_batch[i], i);
     }
 
-    //~ set up codelets
+    //~ set up codelets (graph)
     popops::addCodelets(graph);
     poplin::addCodelets(graph);
     graph.addCodelets("matrixInverseVertex.cpp");
@@ -78,7 +79,7 @@ non-linear aspects of the filter.
     graph.addCodelets("scaledAddVertex.cpp");
     graph.addCodelets("packHitsVertex.cpp");
 
-    //~ tensor declarations
+    //~ tensor declarations (n_inputs)
     std::vector<DataStream> inStreams(n_inputs);
     std::vector<Tensor> covs(n_inputs);
     std::vector<Tensor> qs(n_inputs);
@@ -94,23 +95,23 @@ non-linear aspects of the filter.
     std::vector<Tensor> one(n_inputs);
     std::vector<Tensor> loop_batch(n_inputs);
     std::vector<Tensor> hitThisLoop(n_inputs);
-    //~ project
+    //~ projection tensors (n_inputs)
     std::vector<Tensor> p_proj_all(n_inputs);
     std::vector<Tensor> C_proj_all(n_inputs);
-    //~ filter
+    //~ kalman filter tensors (n_inputs)
     std::vector<Tensor> p_filt_all(n_inputs);
     std::vector<Tensor> C_filt_all(n_inputs);
-    //~ smooth
+    //~ backward smoothing tensors (n_inputs)
     std::vector<Tensor> p_smooth(n_inputs);
     std::vector<Tensor> C_smooth(n_inputs);
-    //~ flattened covariance tensor
+    //~ flattened covariance tensor  //? what is a flat cov?
     std::vector<Tensor> covFlat(covs.size());
 
-    //~ add host to device loop
-    Sequence preProg;
-    for (uint i = 0; i < covs.size(); i++)
+    //~ add host to device loop (covs.size, graph, inStreams, iStr, batch_size, inputs batch)
+    Sequence preProg; //~ preProg and progRepeat go into progMain line ~450
+    for (uint i = 0; i < covs.size(); i++) //? why covs.size?
     {
-        std::string iStr = std::to_string(i);
+        std::string iStr = std::to_string(i); //? why isn't this already a str?
         inStreams[i] = graph.addHostToDeviceFIFO("inStream" + iStr, FLOAT, 5 * 2 * batch_size);
         preProg.add(Copy(inStreams[i], inputs_batch[i]));
     }

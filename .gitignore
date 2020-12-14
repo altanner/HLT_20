@@ -1,10 +1,10 @@
-.vscode/
-HLT_20.code-workspace
 */__pycache__/
+*.code-workspace
 */*.pdf
 *.pdf
 *.json
 */*.json
+.vscode/
 legacy/
 poplar_kalman_filter/boost_1_74_0
 poplar_kalman_filter/Makefile
