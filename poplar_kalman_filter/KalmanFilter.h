@@ -10,7 +10,7 @@ using namespace poplar;
 using namespace poplar::program;
 using namespace popops;
 
-/*
+/* contents
 ~01 KalmanFilter::connectToIPU
 ~02 KalmanFilter::skipSwitch
 ~03 KalmanFilter::smoothingState
@@ -31,6 +31,7 @@ using namespace popops;
 ~18 KalmanFilter::chiSqTest
 ~19 KalmanFilter::smooth
 */
+
 namespace KalmanFilter
 {
 

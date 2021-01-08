@@ -55,7 +55,7 @@ non-linear aspects of the filter.
     //~ instantiate graph
     Graph graph(dev.getTarget());
 
-    //~ convert inputs to tensors
+    //~ convert inputs to tensors (?)
     int n_inputs = 1;
     int batch_size = 1;
     std::vector<Tensor> inputs(n_inputs);
@@ -64,7 +64,7 @@ non-linear aspects of the filter.
     //~ map input tensors to IPU tiles
     for (uint i = 0; i < inputs.size(); i++)
     {
-        std::string iStr = std::to_string(i); //? what is iStr? input string of what?
+        std::string iStr = std::to_string(i); //? what is iStr? debug string. see docs.
         inputs[i] = graph.addVariable(FLOAT, {5, 2}, "x_in" + iStr);
         inputs_batch[i] = graph.addVariable(FLOAT, {uint(batch_size), 5 * 2}, "x_in_batch" + iStr); // Check dims!
         graph.setTileMapping(inputs[i], i);

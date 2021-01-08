@@ -19,18 +19,18 @@ argParser.add_argument("-n", type=int, dest="n", default=1, help="nInputs")
 args = argParser.parse_args()
 n_gen = args.n
 
-plane_distance = 1.0  # Distance between planes
+d = 1.0  # Distance between planes
+N = 5       # Number of planes
 sigma = 10e-2         # Resolution of planes
-plane_count = 5       # Number of planes
 z = 0.1               # Thickness of absorber
 x0 = 0.01             # Radiation length of absorber
 theta0 = 10e-3        # Multiple scattering uncertainty (TODO: use formula)
 
 #~ initiate the matrices as numpy arrays
 #~ F is the transfer matrix
-F = np.array([[1, plane_distance, 0, 0],
+F = np.array([[1, d, 0, 0],
               [0, 1, 0, 0],
-              [0, 0, 1, plane_distance],
+              [0, 0, 1, d],
               [0, 0, 0, 1]])
 
 #~ G is the noise matrix
@@ -106,6 +106,9 @@ def chiSquared(residual, G, C_proj, p_proj, p_filt):
 
 def project(F, p, C, Q):
 
+    """Given the current state of the track, give an estimated
+    projection of where the hit will be on the next detector plane"""
+
     # p_proj = tf.einsum('ji,iB->Bj', F_scalar, p)
 
     # With vector of Fs
@@ -117,6 +120,8 @@ def project(F, p, C, Q):
 
 
 def filter(p_proj, C_proj, H, G, m):
+
+    """Correct the projected track, given the observed hit"""
 
     HG = tf.transpose(H) @ G
 
@@ -140,6 +145,9 @@ def bkgTransport(C, F, C_proj):
 
 
 def smooth(p_k1_smooth, p_k1_proj, C_k1_smooth, C_k1_proj, p_filtered, C_filtered, A):
+
+    """Once all observations and filtering stages have been applied,
+    smooth the overall track into a single linear trajectory"""
 
     # Also reversed batches!
     p_smooth = p_filtered + tf.einsum("Bij,jB->iB", A, p_k1_smooth - p_k1_proj)
@@ -220,15 +228,15 @@ if __name__ == "__main__":
     p = tf.transpose(p)
     C = tf.transpose(C, (1, 2, 0))
 
-    projectedTrack = tf.Variable([p_proj for i in range(plane_count)])
-    projectedCov = tf.Variable([C_proj for i in range(plane_count)])
+    projectedTrack = tf.Variable([p_proj for i in range(N)])
+    projectedCov = tf.Variable([C_proj for i in range(N)])
 
-    filteredTrack = tf.Variable([p for i in range(plane_count)])
-    filteredCov = tf.Variable([C for i in range(plane_count)])
+    filteredTrack = tf.Variable([p for i in range(N)])
+    filteredCov = tf.Variable([C for i in range(N)])
 
     m = tf.Variable(tf.zeros((4, n_gen)))
 
-    for i in range(1, plane_count):
+    for i in range(1, N):
 
         #~ project forward, filter / smooth backwards.
         p_proj, C_proj, p_filt, C_filt = project_and_filter_internal(
@@ -248,10 +256,10 @@ if __name__ == "__main__":
         projectedTrack[i].assign(p_proj)
         projectedCov[i].assign(C_proj)
 
-    smoothedTrack = tf.Variable([filteredTrack[-1] for i in range(plane_count)])
-    smoothedCov = tf.Variable([tf.transpose(filteredCov[-1]) for i in range(plane_count)])
+    smoothedTrack = tf.Variable([filteredTrack[-1] for i in range(N)])
+    smoothedCov = tf.Variable([tf.transpose(filteredCov[-1]) for i in range(N)])
 
-    reversedPlaneIndices = list(range(0, plane_count - 1))
+    reversedPlaneIndices = list(range(0, N - 1))
     reversedPlaneIndices.reverse()
 
     for i in reversedPlaneIndices:

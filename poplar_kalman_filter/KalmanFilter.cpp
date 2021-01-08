@@ -25,7 +25,7 @@
 //~ KF header
 #include "KalmanFilter.h"
 
-/*
+/* contents
 ~01 KalmanFilter::connectToIPU
 ~02 KalmanFilter::skipSwitch
 ~03 KalmanFilter::smoothingState
@@ -60,6 +60,7 @@ Device KalmanFilter::connectToIPU()
 
     bool success = false;
 
+    //~ looping over each IPU
     for (auto &d : manager.getDevices(poplar::TargetType::IPU, 1))
     {
         dev = std::move(d);
