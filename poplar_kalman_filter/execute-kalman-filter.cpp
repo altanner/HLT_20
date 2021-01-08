@@ -52,7 +52,7 @@ non-linear aspects of the filter.
 
     Device dev = KalmanFilter::connectToIPU();
 
-    //~ instantiate graph
+    //~ declare graph
     Graph graph(dev.getTarget());
 
     //~ convert inputs to tensors (?)
