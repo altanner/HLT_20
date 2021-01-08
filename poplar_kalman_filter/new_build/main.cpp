@@ -16,6 +16,9 @@ using poplar::Device;
 using poplar::Graph;
 using poplar::Tensor;
 using poplar::FLOAT;
+using poplar::DataStream;
+using poplar::program::Sequence;
+using poplar::program::Copy;
 
 
 Device connectToIPU()
@@ -52,8 +55,6 @@ Device connectToIPU()
 
 void mapInputsToIPU(Graph &graph, int n_inputs, uint batch_size)
 {
-//    int n_inputs = 1;
-  //  unsigned int batch_size = 1;
     std::vector<Tensor> inputs(n_inputs);
     std::vector<Tensor> inputs_batch(n_inputs);
 
@@ -72,6 +73,7 @@ void mapInputsToIPU(Graph &graph, int n_inputs, uint batch_size)
 
     std::cout << n_inputs << " inputs of "
               << batch_size << " batches mapped to tiles." << "\n";
+
 }
 
 
@@ -87,80 +89,70 @@ void codeletsToVertices(Graph &graph)
     std::cout << "Codelets assigned to graph vertices." << "\n";
 }
 
-// void declareTensors(int n_inputs)
-// {
-//     //~ tensor declarations (n_inputs)
-//     std::vector<DataStream> inStreams(n_inputs);
-//     std::vector<Tensor> covs(n_inputs);
-//     std::vector<Tensor> qs(n_inputs);
-//     std::vector<Tensor> hs(n_inputs);
-//     std::vector<Tensor> gs(n_inputs);
-//     std::vector<Tensor> fs(n_inputs);
-//     std::vector<Tensor> d(n_inputs);
-//     std::vector<Tensor> dInit(n_inputs);
-//     std::vector<Tensor> dSkip(n_inputs);
-//     std::vector<Tensor> scatterInto(n_inputs);
-//     std::vector<Tensor> loop(n_inputs);
-//     std::vector<Tensor> zero(n_inputs);
-//     std::vector<Tensor> one(n_inputs);
-//     std::vector<Tensor> loop_batch(n_inputs);
-//     std::vector<Tensor> hitThisLoop(n_inputs);
-//     //~ projection tensors (n_inputs)
-//     std::vector<Tensor> p_proj_all(n_inputs);
-//     std::vector<Tensor> C_proj_all(n_inputs);
-//     //~ kalman filter tensors (n_inputs)
-//     std::vector<Tensor> p_filt_all(n_inputs);
-//     std::vector<Tensor> C_filt_all(n_inputs);
-//     //~ backward smoothing tensors (n_inputs)
-//     std::vector<Tensor> p_smooth(n_inputs);
-//     std::vector<Tensor> C_smooth(n_inputs);
-//     //~ flattened covariance tensor  //? what is a flat cov?
-//     std::vector<Tensor> covFlat(covs.size());
-// }
+
+void declareTensors(int n_inputs)
+{
+//    public:
+    //~ tensor declarations (n_inputs)
+    std::vector<DataStream> inStreams(n_inputs);
+    std::vector<Tensor> covs(n_inputs);
+    std::vector<Tensor> qs(n_inputs);
+    std::vector<Tensor> hs(n_inputs);
+    std::vector<Tensor> gs(n_inputs);
+    std::vector<Tensor> fs(n_inputs);
+    std::vector<Tensor> d(n_inputs);
+    std::vector<Tensor> dInit(n_inputs);
+    std::vector<Tensor> dSkip(n_inputs);
+    std::vector<Tensor> scatterInto(n_inputs);
+    std::vector<Tensor> loop(n_inputs);
+    std::vector<Tensor> zero(n_inputs);
+    std::vector<Tensor> one(n_inputs);
+    std::vector<Tensor> loop_batch(n_inputs);
+    std::vector<Tensor> hitThisLoop(n_inputs);
+    //~ projection tensors (n_inputs)
+    std::vector<Tensor> p_proj_all(n_inputs);
+    std::vector<Tensor> C_proj_all(n_inputs);
+    //~ kalman filter tensors (n_inputs)
+    std::vector<Tensor> p_filt_all(n_inputs);
+    std::vector<Tensor> C_filt_all(n_inputs);
+    //~ backward smoothing tensors (n_inputs)
+    std::vector<Tensor> p_smooth(n_inputs);
+    std::vector<Tensor> C_smooth(n_inputs);
+    //~ flattened covariance tensor  //? what is a flat cov?
+    std::vector<Tensor> covFlat(covs.size());
+}
 
 //~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~
 
 int main()
 {
+    int n_inputs = 1;
+    unsigned int batch_size = 1;
+
     Device dev = connectToIPU();
 
     Graph graph(dev);
-
-    int n_inputs = 1;
-    unsigned int batch_size = 1;
 
     mapInputsToIPU(graph, n_inputs, batch_size);
 
     codeletsToVertices(graph);
 
-//    declareTensors(n_inputs);
-    // //~ tensor declarations (n_inputs)
-    std::vector<DataStream> inStreams(n_inputs);
-    // std::vector<Tensor> covs(n_inputs);
-    // std::vector<Tensor> qs(n_inputs);
-    // std::vector<Tensor> hs(n_inputs);
-    // std::vector<Tensor> gs(n_inputs);
-    // std::vector<Tensor> fs(n_inputs);
-    // std::vector<Tensor> d(n_inputs);
-    // std::vector<Tensor> dInit(n_inputs);
-    // std::vector<Tensor> dSkip(n_inputs);
-    // std::vector<Tensor> scatterInto(n_inputs);
-    // std::vector<Tensor> loop(n_inputs);
-    // std::vector<Tensor> zero(n_inputs);
-    // std::vector<Tensor> one(n_inputs);
-    // std::vector<Tensor> loop_batch(n_inputs);
-    // std::vector<Tensor> hitThisLoop(n_inputs);
-    // //~ projection tensors (n_inputs)
-    // std::vector<Tensor> p_proj_all(n_inputs);
-    // std::vector<Tensor> C_proj_all(n_inputs);
-    // //~ kalman filter tensors (n_inputs)
-    // std::vector<Tensor> p_filt_all(n_inputs);
-    // std::vector<Tensor> C_filt_all(n_inputs);
-    // //~ backward smoothing tensors (n_inputs)
-    // std::vector<Tensor> p_smooth(n_inputs);
-    // std::vector<Tensor> C_smooth(n_inputs);
-    // //~ flattened covariance tensor  //? what is a flat cov?
-    // std::vector<Tensor> covFlat(covs.size());
+    declareTensors(n_inputs);
+
+    //! this part isn't working because the functions above
+    //! are making their products private, so covs, inStream etc
+    //! are not in scope. I guess the functions above are crazy
+    //! and need to be turned into #includes?
+    //runPreProg
+    // Sequence preProg;
+    // for (uint i = 0; i < covs.size(); i++)
+    // {
+    //     std::string iStr = std::to_string(i);
+    //     inStreams[i] = graph.addHostToDeviceFIFO("inStream" + iStr,
+    //                                              FLOAT,
+    //                                              5 * 2 * batch_size);
+    //     preProg.add(Copy(inStreams[i], inputs_batch[i]));
+    // }
 
     return 0;
 }
