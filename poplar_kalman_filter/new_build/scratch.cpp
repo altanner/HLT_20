@@ -8,7 +8,16 @@ void count()
         }
 }
 
+int bob;
+
+int a_number()
+{
+    int bob = 1342;
+    return bob;
+}
+
 int main()
 {
-    count();
+    bob = a_number();
+    std::cout << bob << "\n";
 }
