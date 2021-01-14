@@ -16,3 +16,7 @@ python_kalman_filter/env_gc00
 
 
 poplar_kalman_filter/new_build/scratch.cpp
+poplar_kalman_filter/new_build/main
+poplar_kalman_filter/new_build/out
+poplar_kalman_filter/new_build/a.out
+
