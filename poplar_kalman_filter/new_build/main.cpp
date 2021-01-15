@@ -12,15 +12,8 @@
 
 #include <poplin/codelets.hpp>
 
-using poplar::DeviceManager;
-using poplar::Device;
-using poplar::Graph;
-using poplar::Tensor;
-using poplar::FLOAT;
-using poplar::INT;
-using poplar::DataStream;
-using poplar::program::Sequence;
-using poplar::program::Copy;
+//~ the -using- lines have moved to graveyard
+//~ resurrect once you are clear on what is being abbreviated
 
 int N = 5;               // Number of planes
 float d = 1.0;           // Distance between planes
@@ -29,12 +22,11 @@ float z = 0.1;           // Thickness of absorber
 float x0 = 0.01;         // Radiation length of absorber
 float theta0 = 10E-3;    // Multiple scatter uncertainty
 
-
-Device connectToIPU()
+poplar::Device connectToIPU()
 {
     bool success = false;
-    DeviceManager manager = DeviceManager::createDeviceManager();
-    Device dev;
+    poplar::DeviceManager manager = poplar::DeviceManager::createDeviceManager();
+    poplar::Device dev;
     auto devices = manager.getDevices(poplar::TargetType::IPU, 1);
 
     for (auto &device : devices)
@@ -61,21 +53,21 @@ Device connectToIPU()
     return dev;
 }
 
-void mapInputsToTiles(Graph &graph,
-                    unsigned int n_inputs,
-                    unsigned int batch_size,
-                    std::vector<Tensor> &inputs,
-                    std::vector<Tensor> &inputs_batch)
+void mapInputsToTiles(poplar::Graph &graph,
+                      unsigned int n_inputs,
+                      unsigned int batch_size,
+                      std::vector<poplar::Tensor> &inputs,
+                      std::vector<poplar::Tensor> &inputs_batch)
 {
     inputs.resize(n_inputs);       //~ this reduces the input dependencies
     inputs_batch.resize(n_inputs); //~ to being JUST n_inputs
 
     for (int i = 0; i < n_inputs; i++)
     {
-        inputs[i] = graph.addVariable(FLOAT,
+        inputs[i] = graph.addVariable(poplar::FLOAT,
                                       {5, 2},
                                       "x_in" + std::to_string(i));
-        inputs_batch[i] = graph.addVariable(FLOAT,
+        inputs_batch[i] = graph.addVariable(poplar::FLOAT,
                                             {batch_size, 5 * 2},
                                             "x_in_batch" + std::to_string(i));
         graph.setTileMapping(inputs[i], i);
@@ -86,7 +78,7 @@ void mapInputsToTiles(Graph &graph,
               << batch_size << " batches mapped to tiles." << "\n";
 }
 
-void addProgramCodelets(Graph &graph)
+void addProgramCodelets(poplar::Graph &graph)
 {
     popops::addCodelets(graph);
     poplin::addCodelets(graph);
@@ -98,20 +90,20 @@ void addProgramCodelets(Graph &graph)
     std::cout << "Codelets added." << "\n";
 }
 
-void mapInStreamsToDevice(Graph &graph,
+void mapInStreamsToDevice(poplar::Graph &graph,
                           unsigned int batch_size,
-                          std::vector<Tensor> &inputs_batch,
-                          std::vector<DataStream> &inStreams,
-                          Sequence &preProg)
+                          std::vector<poplar::Tensor> &inputs_batch,
+                          std::vector<poplar::DataStream> &inStreams,
+                          poplar::program::Sequence &preProg)
 {
     unsigned int n_inputs = inputs_batch.size();
     inStreams.resize(n_inputs);
-    for (uint i = 0; i < n_inputs; i++)
+    for (unsigned int i = 0; i < n_inputs; i++)
         {
             inStreams[i] = graph.addHostToDeviceFIFO("inStream" + std::to_string(i),
-                                                    FLOAT,
+                                                    poplar::FLOAT,
                                                     5 * 2 * batch_size);
-            preProg.add(Copy(inStreams[i], inputs_batch[i]));
+            preProg.add(poplar::program::Copy(inStreams[i], inputs_batch[i]));
             std::cout << "streamloop" << "\n";
         }
 }
@@ -120,16 +112,17 @@ void mapInStreamsToDevice(Graph &graph,
 
 int main()
 {
-    //~ 59-60
-    unsigned int n_inputs = 1;
-    unsigned int batch_size = 1;
 
     //~ 53
-    Device dev = connectToIPU();
+    poplar::Device dev = connectToIPU();
 
     //~ 61-72
-    Graph graph(dev);
-    std::vector<Tensor> inputs, inputs_batch;
+    //~ 59-60
+    poplar::Graph graph(dev);
+    unsigned int n_inputs = 1;
+    unsigned int batch_size = 1;
+    std::vector<poplar::Tensor> inputs,
+                                inputs_batch;
     mapInputsToTiles(graph,
                      n_inputs,
                      batch_size,
@@ -140,114 +133,143 @@ int main()
     addProgramCodelets(graph);
 
     //§ preProg §//§//§//§//§//§//§//§//§//§//§//§
-    std::vector<Tensor> covs;
-    std::vector<DataStream> inStreams;
     //~ 111-117
-    Sequence preProg;
+    std::vector<poplar::DataStream> inStreams(n_inputs);
+    poplar::program::Sequence preProg;
     mapInStreamsToDevice(graph,
                          batch_size,
                          inputs_batch,
                          inStreams,
                          preProg);
 
-    //§ prog §//§//§//§//§//§//§//§//§//§//§//§//§
-    //~ I tried to make prog into a func, but seeing as it has
-    // //~ 20 args going in, I guess that is naive.
-    std::vector<Tensor> qs(n_inputs);
-    std::vector<Tensor> hs(n_inputs);
-    std::vector<Tensor> gs(n_inputs);
-    std::vector<Tensor> fs(n_inputs);
-    std::vector<Tensor> d(n_inputs);
-    std::vector<Tensor> dInit(n_inputs);
-    std::vector<Tensor> dSkip(n_inputs);
-    std::vector<Tensor> scatterInto(n_inputs);
-    std::vector<Tensor> loop(n_inputs);
-    std::vector<Tensor> zero(n_inputs);
-    std::vector<Tensor> one(n_inputs);
-    std::vector<Tensor> loop_batch(n_inputs);
-    std::vector<Tensor> hitThisLoop(n_inputs);
-    //~ projection tensors (n_inputs)
-    std::vector<Tensor> p_proj_all(n_inputs);
-    std::vector<Tensor> C_proj_all(n_inputs);
-    //~ kalman filter tensors (n_inputs)
-    std::vector<Tensor> p_filt_all(n_inputs);
-    std::vector<Tensor> C_filt_all(n_inputs);
-    //~ backward smoothing tensors (n_inputs)
-    std::vector<Tensor> p_smooth(n_inputs);
-    std::vector<Tensor> C_smooth(n_inputs);
-    std::vector<Tensor> covFlat(covs.size());
+    //~ these declarations are now a list.
+    std::vector<poplar::Tensor> qs(n_inputs),
+                                hs(n_inputs),
+                                gs(n_inputs),
+                                fs(n_inputs),
+                                d(n_inputs),
+                                dInit(n_inputs),
+                                dSkip(n_inputs),
+                                scatterInto(n_inputs),
+                                loop(n_inputs),
+                                zero(n_inputs),
+                                one(n_inputs),
+                                loop_batch(n_inputs),
+                                hitThisLoop(n_inputs),
+                                //~ projection tensors
+                                p_proj_all(n_inputs),
+                                C_proj_all(n_inputs),
+                                //~ kalman filter tensors
+                                p_filt_all(n_inputs),
+                                C_filt_all(n_inputs),
+                                //~ backward smoothing tensors
+                                p_smooth(n_inputs),
+                                C_smooth(n_inputs),
+                                //~ flattened covariance tensor
+                                covs(n_inputs),
+                                covsFlat(n_inputs);
 
-//     //~ 120-217
-    Sequence prog;
-    for (uint i = 0; i < covs.size(); i++)
+    //~ these xFlat tensors used to be declared in loop
+    //~ F is the transfer matrix
+    poplar::Tensor fFlat =
+        graph.addConstant<float>(poplar::FLOAT, {16, 1},
+                                {1., 1., 0., 0.,
+                                 0., 1., 0., 0.,
+                                 0., 0., 1., 1.,
+                                 0., 0., 0., 1.});
+
+    //~ G is the noise matrix
+    poplar::Tensor gFlat =
+        graph.addConstant<float>(poplar::FLOAT, {16, 1},
+                                {float(1.0)/(sigma * sigma), 0., 0., 0.,
+                                 0, 0., 0., 0.,
+                                 0, 0., float(1.0)/(sigma * sigma), 0.,
+                                 0, 0., 0., 0.});
+
+    //~ H the relation between the measurement m and the state p
+    poplar::Tensor hFlat =
+        graph.addConstant<float>(poplar::FLOAT, {16, 1},
+                                {1., 0., 0., 0.,
+                                 0., 0., 0., 0.,
+                                 0., 0., 1., 0.,
+                                 0., 0., 0., 0.});
+
+    //~ Q is the random error matrix, ie the scatter
+    poplar::Tensor qFlat =
+        graph.addConstant<float>(poplar::FLOAT,
+                                {16, 1},
+                                {0.});
+
+    //~ 120-217
+    //§ prog §//§//§//§//§//§//§//§//§//§//§//§//§
+    poplar::program::Sequence prog;
+    for (unsigned int i = 0; i < n_inputs; i++)
     {
         std::string iStr = std::to_string(i);
-        loop[i] = graph.addVariable(INT, {1}, "loop");
+        //~ what plane of KF
+        loop[i] = graph.addVariable(poplar::INT, {1}, "loop");
         graph.setTileMapping(loop[i], i);
 
-        scatterInto[i] = graph.addConstant<int>(INT, {1}, {0});
+        //~
+        scatterInto[i] = graph.addConstant<int>(poplar::INT, {1}, {0});
         graph.setTileMapping(scatterInto[i], i);
 
-        zero[i] = graph.addConstant<int>(INT, {1}, {0});
+        zero[i] = graph.addConstant<int>(poplar::INT, {1}, {0});
         graph.setTileMapping(zero[i], i);
 
-        one[i] = graph.addConstant<int>(INT, {1}, {1});
+        one[i] = graph.addConstant<int>(poplar::INT, {1}, {1});
         graph.setTileMapping(one[i], i);
 
-        //! this line > segfault
-        prog.add(Copy(inputs_batch[i].slice(0, 1, 0).reshape({5, 2}), inputs[i]));
+        prog.add(poplar::program::Copy(inputs_batch[i].slice(0, 1, 0).reshape({5, 2}),
+                      inputs[i]));
 
-//         //* line 25
-//         //? why are these inside the loop? tf they are out(?)
-//         //~ initiate the matrices as tensors
-//         //~ F is the transfer matrix
-         Tensor fFlat = graph.addConstant<float>(FLOAT, {16, 1},
-                                                {1., 1., 0., 0.,
-                                                 0., 1., 0., 0.,
-                                                 0., 0., 1., 1.,
-                                                 0., 0., 0., 1.});
+        d[i] =
+            graph.addVariable(poplar::FLOAT, {1, 1}, "d" + iStr);
+        dInit[i] =
+            graph.addConstant<float>(poplar::FLOAT, {1, 1}, {1.});
+        dSkip[i] =
+            graph.addConstant<float>(poplar::FLOAT, {1, 1}, {2.});
 
-        //~ G is the noise matrix
-        Tensor gFlat = graph.addConstant<float>(FLOAT, {16, 1},
-                                                {float(1.0)/(sigma * sigma), 0., 0., 0.,
-                                                0, 0., 0., 0.,
-                                                0, 0., float(1.0)/(sigma * sigma), 0.,
-                                                0, 0., 0., 0.});
+        prog.add(poplar::program::Copy(dInit[i], d[i]));
 
-        //~ H the relation between the measurement m and the state p
-        Tensor hFlat = graph.addConstant<float>(FLOAT, {16, 1},
-                                                {1., 0., 0., 0.,
-                                                0., 0., 0., 0.,
-                                                0., 0., 1., 0.,
-                                                0., 0., 0., 0.});
+        covs[i] =
+            graph.addVariable(poplar::FLOAT, {4, 4}, "cov" + iStr);
 
-        //~ Q is the random error matrix, ie the scatter
-        Tensor qFlat = graph.addConstant<float>(FLOAT, {16, 1}, {0.});
+        //~ cov is the initial parameters (?)
+        covsFlat[i] =
+            graph.addConstant<float>(poplar::FLOAT, {16, 1},
+                                    {sigma * sigma, 0., 0., 0.,
+                                     0., M_PI, 0., 0.,
+                                     0., 0., sigma * sigma, 0.,
+                                     0., 0., 0., M_PI});
 
-        //~ cov is the initial parameters
-        covFlat[i] = graph.addConstant<float>(FLOAT, {16, 1},
-                                              {sigma * sigma, 0., 0., 0.,
-                                              0., M_PI, 0., 0.,
-                                              0., 0., sigma * sigma, 0.,
-                                              0., 0., 0., M_PI});
+        //~ prog.adds can go to function?
+        prog.add(poplar::program::Copy(covsFlat[i].reshape({4, 4}), covs[i]));
 
-        d[i] = graph.addVariable(FLOAT, {1, 1}, "d" + iStr);
-        dInit[i] = graph.addConstant<float>(FLOAT, {1, 1}, {1.});
-        dSkip[i] = graph.addConstant<float>(FLOAT, {1, 1}, {2.});
+        //~ graph add are just building the graph (to func?/class)
+        p_proj_all[i] = graph.addVariable(poplar::FLOAT,
+                                         {5, 4, 1},
+                                         "p_proj_all" + iStr);
 
-        prog.add(Copy(dInit[i], d[i]));
+        C_proj_all[i] = graph.addVariable(poplar::FLOAT,
+                                         {5, 4, 4},
+                                         "C_proj_all" + iStr);
 
-        covs[i] = graph.addVariable(FLOAT, {4, 4}, "cov" + iStr);
-        prog.add(Copy(covFlat[i].reshape({4, 4}), covs[i]));
+        p_filt_all[i] = graph.addVariable(poplar::FLOAT,
+                                         {5, 4, 1},
+                                         "p_filt_all" + iStr);
 
-        p_proj_all[i] = graph.addVariable(FLOAT, {5, 4, 1}, "p_proj_all" + iStr);
-        C_proj_all[i] = graph.addVariable(FLOAT, {5, 4, 4}, "C_proj_all" + iStr);
+        C_filt_all[i] = graph.addVariable(poplar::FLOAT,
+                                         {5, 4, 4},
+                                         "C_filt_all" + iStr);
 
-        p_filt_all[i] = graph.addVariable(FLOAT, {5, 4, 1}, "p_filt_all" + iStr);
-        C_filt_all[i] = graph.addVariable(FLOAT, {5, 4, 4}, "C_filt_all" + iStr);
+        p_smooth[i] = graph.addVariable(poplar::FLOAT,
+                                       {4, 1},
+                                       "p_smooth" + iStr);
 
-        p_smooth[i] = graph.addVariable(FLOAT, {4, 1}, "p_smooth" + iStr);
-        C_smooth[i] = graph.addVariable(FLOAT, {4, 4}, "C_smooth" + iStr);
+        C_smooth[i] = graph.addVariable(poplar::FLOAT,
+                                       {4, 4},
+                                       "C_smooth" + iStr);
 
         graph.setTileMapping(p_proj_all[i], i);
         graph.setTileMapping(C_proj_all[i], i);
@@ -257,26 +279,28 @@ int main()
         graph.setTileMapping(p_smooth[i], i);
         graph.setTileMapping(C_smooth[i], i);
 
-        qs[i] = qFlat.reshape({4, 4});
-        hs[i] = hFlat.reshape({4, 4});
-        gs[i] = gFlat.reshape({4, 4});
-        fs[i] = fFlat.reshape({4, 4});
+        graph.setTileMapping(covs[i], i);
+        graph.setTileMapping(covsFlat[i], i);
 
-        graph.setTileMapping(covFlat[i], i);
-        graph.setTileMapping(qFlat, i);
         graph.setTileMapping(d[i], i);
         graph.setTileMapping(dInit[i], i);
         graph.setTileMapping(dSkip[i], i);
-        graph.setTileMapping(covs[i], i);
-        graph.setTileMapping(qs[i], i);
-        graph.setTileMapping(gFlat, i);
-        graph.setTileMapping(hFlat, i);
-        graph.setTileMapping(fFlat, i);
-        graph.setTileMapping(hs[i], i);
-        graph.setTileMapping(gs[i], i);
-        graph.setTileMapping(fs[i], i);
 
-   } //~ end for (uint i = 0; i < covs.size(); i++)
+        fs[i] = fFlat.reshape({4, 4});
+        graph.setTileMapping(fs[i], i);
+        graph.setTileMapping(fFlat, i);
+        gs[i] = gFlat.reshape({4, 4});
+        graph.setTileMapping(gs[i], i);
+        graph.setTileMapping(gFlat, i);
+        hs[i] = hFlat.reshape({4, 4});
+        graph.setTileMapping(hs[i], i);
+        graph.setTileMapping(hFlat, i);
+        qs[i] = qFlat.reshape({4, 4});
+        graph.setTileMapping(qs[i], i);
+        graph.setTileMapping(qFlat, i);
+
+    } //~ end for (unsigned int i = 0; i < n_inputs; i++)
 
     return 0;
 }
+

@@ -1,3 +1,43 @@
+//! Lines culled from scripts which might be useful later.
+
+//~ these were removed because I was getting confused with
+//~ what they were obscuring.
+using poplar::DeviceManager;
+using poplar::Device;
+using poplar::Graph;
+using poplar::Tensor;
+using poplar::FLOAT;
+using poplar::INT;
+using poplar::DataStream;
+using poplar::program::Sequence;
+using poplar::program::Copy;
+
+//~ std::vector<Tensor> list in full
+    std::vector<poplar::Tensor> hs(n_inputs);
+    std::vector<poplar::Tensor> gs(n_inputs);
+    std::vector<poplar::Tensor> fs(n_inputs);
+    std::vector<poplar::Tensor> d(n_inputs);
+    std::vector<poplar::Tensor> dInit(n_inputs);
+    std::vector<poplar::Tensor> dSkip(n_inputs);
+    std::vector<poplar::Tensor> scatterInto(n_inputs);
+    std::vector<poplar::Tensor> loop(n_inputs);
+    std::vector<poplar::Tensor> zero(n_inputs);
+    std::vector<poplar::Tensor> one(n_inputs);
+    std::vector<poplar::Tensor> loop_batch(n_inputs);
+    std::vector<poplar::Tensor> hitThisLoop(n_inputs);
+    //~ projection tensors (n_inputs)
+    std::vector<poplar::Tensor> p_proj_all(n_inputs);
+    std::vector<poplar::Tensor> C_proj_all(n_inputs);
+    //~ kalman filter tensors (n_inputs)
+    std::vector<poplar::Tensor> p_filt_all(n_inputs);
+    std::vector<poplar::Tensor> C_filt_all(n_inputs);
+    //~ backward smoothing tensors (n_inputs)
+    std::vector<poplar::Tensor> p_smooth(n_inputs);
+    std::vector<poplar::Tensor> C_smooth(n_inputs);
+    std::vector<poplar::Tensor> covFlat(n_inputs);
+
+
+
 void progLoop(Graph &graph,
               std::vector<Tensor> qs,
               std::vector<Tensor> hs,

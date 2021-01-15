@@ -82,8 +82,8 @@ non-linear aspects of the filter.
     //~ tensor declarations (n_inputs)
     std::vector<DataStream> inStreams(n_inputs);
     std::vector<Tensor> covs(n_inputs);
-    std::vector<Tensor> qs(n_inputs);
-    std::vector<Tensor> hs(n_inputs);
+    std::vector<Tensor> qs(n_inputs), hs(n_inputs);
+//    std::vector<Tensor> hs(n_inputs);
     std::vector<Tensor> gs(n_inputs);
     std::vector<Tensor> fs(n_inputs);
     std::vector<Tensor> d(n_inputs);
@@ -472,7 +472,7 @@ non-linear aspects of the filter.
                              &vs[i][5 * 2 * batch_size]);
     }
 
-    //~ why is this in brackets?
+    //~ why is this in brackets? to time it
     {
     boost::timer::auto_cpu_timer t;
     engine.run(0); //~ run things
