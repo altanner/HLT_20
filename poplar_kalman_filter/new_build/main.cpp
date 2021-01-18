@@ -63,7 +63,7 @@ void mapInputsToTiles(poplar::Graph &graph,
     inputs_batch.resize(n_inputs); //~ to being JUST n_inputs
 
     for (int i = 0; i < n_inputs; i++)
-    {
+    {                             //? why do strings go in to these tensors?
         inputs[i] = graph.addVariable(poplar::FLOAT,
                                       {5, 2},
                                       "x_in" + std::to_string(i));
@@ -90,7 +90,7 @@ void addProgramCodelets(poplar::Graph &graph)
     std::cout << "Codelets added." << "\n";
 }
 
-void mapInStreamsToDevice(poplar::Graph &graph,
+void sendInStreamsToDevice(poplar::Graph &graph,
                           unsigned int batch_size,
                           std::vector<poplar::Tensor> &inputs_batch,
                           std::vector<poplar::DataStream> &inStreams,
@@ -104,8 +104,8 @@ void mapInStreamsToDevice(poplar::Graph &graph,
                                                     poplar::FLOAT,
                                                     5 * 2 * batch_size);
             preProg.add(poplar::program::Copy(inStreams[i], inputs_batch[i]));
-            std::cout << "streamloop" << "\n";
         }
+    std::cout << "Datastreams sent to IPU." << "\n";
 }
 
 //~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~//~
@@ -132,17 +132,17 @@ int main()
     //~ 75-80
     addProgramCodelets(graph);
 
-    //§ preProg §//§//§//§//§//§//§//§//§//§//§//§
+    //§ preProg §//§//§//§//§//§//§//§//§//§//§//§//§
     //~ 111-117
     std::vector<poplar::DataStream> inStreams(n_inputs);
     poplar::program::Sequence preProg;
-    mapInStreamsToDevice(graph,
-                         batch_size,
-                         inputs_batch,
-                         inStreams,
-                         preProg);
+    sendInStreamsToDevice(graph,
+                          batch_size,
+                          inputs_batch,
+                          inStreams,
+                          preProg);
 
-    //~ these declarations are now a list.
+    //§ prog declarations §//§//§//§//§//§//§//§//§//§
     std::vector<poplar::Tensor> qs(n_inputs),
                                 hs(n_inputs),
                                 gs(n_inputs),
@@ -194,7 +194,7 @@ int main()
                                  0., 0., 1., 0.,
                                  0., 0., 0., 0.});
 
-    //~ Q is the random error matrix, ie the scatter
+    //~ Q is the random error matrix, ie the scatter (?why)
     poplar::Tensor qFlat =
         graph.addConstant<float>(poplar::FLOAT,
                                 {16, 1},
@@ -206,14 +206,17 @@ int main()
     for (unsigned int i = 0; i < n_inputs; i++)
     {
         std::string iStr = std::to_string(i);
-        //~ what plane of KF
+        //~ what plane of KF I think
+        //? why do strings go into these tensors?
         loop[i] = graph.addVariable(poplar::INT, {1}, "loop");
         graph.setTileMapping(loop[i], i);
 
-        //~
+        //~ btw nothing to do with particle scattering
+        //? why do we have <int> and poplar::INT?
         scatterInto[i] = graph.addConstant<int>(poplar::INT, {1}, {0});
         graph.setTileMapping(scatterInto[i], i);
 
+        //? a tensor of zeros?
         zero[i] = graph.addConstant<int>(poplar::INT, {1}, {0});
         graph.setTileMapping(zero[i], i);
 
