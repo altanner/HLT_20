@@ -3,6 +3,7 @@
 #include <vector>
 #include <math.h>
 #include <unistd.h> //~ UNIX standard w glibc
+#include <boost/timer/timer.hpp>
 
 #include <poplar/DeviceManager.hpp>
 #include <poplar/Graph.hpp>
@@ -238,7 +239,8 @@ int main()
         covs[i] =
             graph.addVariable(poplar::FLOAT, {4, 4}, "cov" + iStr);
 
-        //~ cov is the initial parameters (?)
+        //~ cov is the initial parameters (?) is it? why do I think that?
+        //~ also - what do you mean by "parameters"?
         covsFlat[i] =
             graph.addConstant<float>(poplar::FLOAT, {16, 1},
                                     {sigma * sigma, 0., 0., 0.,
